@@ -206,11 +206,8 @@ public class TimestampWithLocalTimeZoneAccessorTest {
 
     value = new Timestamp(SHIFT_INSTANT_1);
     assertThat(instance.getString(), is(SHIFT_STRING_1));
-
-    // b/344910002: disable inconsistent Gregorian shift test
-    // value = new Timestamp(SHIFT_INSTANT_2);
-    // assertThat(instance.getString(), is(SHIFT_STRING_2));
-
+    value = new Timestamp(SHIFT_INSTANT_2);
+    assertThat(instance.getString(), is(SHIFT_STRING_2));
     value = new Timestamp(SHIFT_INSTANT_3);
     assertThat(instance.getString(), is(SHIFT_STRING_3));
     value = new Timestamp(SHIFT_INSTANT_4);
