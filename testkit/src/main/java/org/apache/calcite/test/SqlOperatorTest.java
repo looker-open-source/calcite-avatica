@@ -12781,6 +12781,7 @@ public class SqlOperatorTest {
   @Test void testParseTimestamp() {
     final SqlOperatorFixture f = fixture()
         .withLibrary(SqlLibrary.BIG_QUERY)
+        .withConnectionFactory(cf -> cf.with(CalciteConnectionProperty.TIME_ZONE, "UTC"))
         .setFor(SqlLibraryOperators.PARSE_TIMESTAMP);
     f.checkScalar("PARSE_TIMESTAMP('%a %b %e %I:%M:%S %Y', 'Thu Dec 25 07:30:00 2008')",
         "2008-12-25 07:30:00",
@@ -12788,8 +12789,19 @@ public class SqlOperatorTest {
     f.checkScalar("PARSE_TIMESTAMP('%c', 'Thu Dec 25 07:30:00 2008')",
         "2008-12-25 07:30:00",
         "TIMESTAMP_WITH_LOCAL_TIME_ZONE(0) NOT NULL");
+  }
+
+  @Test void testParseTimestampInAlternateTimeZone() {
+    final SqlOperatorFixture f = fixture()
+        .withLibrary(SqlLibrary.BIG_QUERY)
+        .withConnectionFactory(
+            cf -> cf.with(CalciteConnectionProperty.TIME_ZONE, "America/Los_Angeles"))
+        .setFor(SqlLibraryOperators.PARSE_TIMESTAMP);
+    f.checkScalar("PARSE_TIMESTAMP('%a %b %e %I:%M:%S %Y', 'Thu Dec 25 07:30:00 2008')",
+        "2008-12-24 23:30:00",
+        "TIMESTAMP_WITH_LOCAL_TIME_ZONE(0) NOT NULL");
     f.checkScalar("PARSE_TIMESTAMP('%c', 'Thu Dec 25 07:30:00 2008')",
-        "2008-12-25 07:30:00",
+        "2008-12-24 23:30:00",
         "TIMESTAMP_WITH_LOCAL_TIME_ZONE(0) NOT NULL");
     f.checkNull("PARSE_TIME('%a %b %e %I:%M:%S %Y', CAST(NULL AS TIMESTAMP))");
     f.checkNull("PARSE_TIMESTAMP(NULL, CAST(NULL AS TIMESTAMP))");
