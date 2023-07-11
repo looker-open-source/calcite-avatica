@@ -778,7 +778,8 @@ public abstract class AvaticaConnection implements Connection {
    * @param <T> The return type from {@code call}.
    */
   public interface CallableWithoutException<T> {
-    T call();
+    // TODO: whoops, broke the "WithoutException" part. Let's make sure we handle errors better.
+    T call() throws SQLException;
   }
 
   /**
@@ -796,11 +797,14 @@ public abstract class AvaticaConnection implements Connection {
       } catch (AvaticaClientRuntimeException e) {
         lastException = e;
         if (ErrorResponse.MISSING_CONNECTION_ERROR_CODE == e.getErrorCode()
-                && transparentReconnectEnabled) {
+            && transparentReconnectEnabled) {
           this.openConnection();
           continue;
         }
         throw e;
+        // TODO: don't do this - raise a proper AvaticaRuntimeException for callables
+      } catch (Exception e) {
+        throw new RuntimeException(e);
       }
     }
     if (null != lastException) {

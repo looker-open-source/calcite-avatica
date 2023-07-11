@@ -37,6 +37,7 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-core")
     implementation("org.apache.httpcomponents.client5:httpclient5")
     implementation("org.apache.httpcomponents.core5:httpcore5")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.10")
     implementation("org.slf4j:slf4j-api")
     testImplementation("junit:junit")
     testImplementation("org.mockito:mockito-core")

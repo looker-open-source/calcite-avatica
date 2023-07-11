@@ -24,6 +24,10 @@ import org.apache.calcite.avatica.DriverVersion;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.UnregisteredDriver;
 
+import org.apache.calcite.avatica.remote.looker.LookerRemoteMeta;
+
+import org.apache.calcite.avatica.remote.looker.LookerRemoteService;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -96,7 +100,7 @@ public class Driver extends UnregisteredDriver {
     // Create a single Service and set it on the Connection instance
     final Service service = createService(connection, config);
     connection.setService(service);
-    return new RemoteMeta(connection, service);
+    return new LookerRemoteMeta(connection, service);
   }
 
   KerberosConnection createKerberosUtility(ConnectionConfig config) {
@@ -130,6 +134,9 @@ public class Driver extends UnregisteredDriver {
         break;
       case PROTOBUF:
         service = new RemoteProtobufService(httpClient, new ProtobufTranslationImpl());
+        break;
+      case LOOKER:
+        service = new LookerRemoteService(config.url());
         break;
       default:
         throw new IllegalArgumentException("Unhandled serialization type: " + serializationType);
