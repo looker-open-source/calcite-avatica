@@ -14,14 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.calcite.avatica.remote.looker.utils;
+
 
 import com.looker.rtl.AuthSession;
 import com.looker.rtl.ConfigurationProvider;
+import com.looker.rtl.SDKErrorInfo;
+import com.looker.rtl.SDKResponse;
 import com.looker.rtl.Transport;
 import com.looker.sdk.ApiSettings;
-
 import com.looker.sdk.LookerSDK;
 
 import java.sql.SQLException;
@@ -29,18 +30,60 @@ import java.sql.SQLInvalidAuthorizationSpecException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.calcite.avatica.BuiltInConnectionProperty;
+import static com.looker.rtl.TransportKt.ok;
+import static com.looker.rtl.TransportKt.parseSDKError;
 
+/**
+ * Utility class for generating, authenticating, and calling {@link LookerSDK}s.
+ */
 public class LookerSdkFactory {
-  static private boolean hasApiCreds(Map<String, String> props) {
+  private LookerSdkFactory() {
+  }
+
+  /** Format to use for all statement executions */
+  public static final String RESULT_FORMAT = "json_bi";
+
+  /** Simple functional interface to wrap SDK calls */
+  public interface LookerSDKCall {
+    SDKResponse call();
+  }
+
+  /** Wraps {@link SQLException}s as {@link RuntimeException}s. Almost all exceptions in Avatica are
+   * thrown as RuntimeExceptions. There are 'TODO's to change this behavior but until those are
+   * resolved we should do the same. RuntimeExceptions do not have to be part of the method
+   * signature so it does make things nicer to work with. */
+  public static RuntimeException handle(SQLException e) {
+    return new RuntimeException(e);
+  }
+
+  /** Makes the SDK call and throws any errors as runtime {@link SQLException}s */
+  public static <T> T safeSdkCall(LookerSDKCall sdkCall) {
+    try {
+      return ok(sdkCall.call());
+    } catch (Error e) {
+      SDKErrorInfo error = parseSDKError(e.toString());
+      // TODO: Get full errors from error.errors array
+      throw handle(new SQLException(error.getMessage()));
+    }
+  }
+
+  private static boolean hasApiCreds(Map<String, String> props) {
     return props.containsKey("user") && props.containsKey("password");
   }
 
-  static private boolean hasAuthToken(Map<String, String> props) {
+  private static boolean hasAuthToken(Map<String, String> props) {
     return props.containsKey("token");
   }
 
-  static public AuthSession createAuthSession(String url, Map<String, String> props) throws SQLException {
+  /** Creates a {@link AuthSession} to a Looker instance.
+   * <p>If {@code client_id} and {@code client_secret} are provided in {@code props} then
+   * {@link AuthSession#login} is called on the session. Otherwise, if {@code token} is provided
+   * then its value is set as the auth token in the HTTP header for all requests for the session.
+   *
+   * @param url the URL of the Looker instance.
+   * @param props map of properties for the session. */
+  public static AuthSession createAuthSession(String url, Map<String, String> props)
+      throws SQLException {
     Map<String, String> apiConfig = new HashMap<>();
     apiConfig.put("base_url", url);
     apiConfig.put("timeout", props.get(props.getOrDefault("timeout", "120")));
@@ -50,8 +93,8 @@ public class LookerSdkFactory {
     boolean authToken = hasAuthToken(props);
 
     if (apiLogin && authToken) {
-      throw new SQLInvalidAuthorizationSpecException("Invalid connection params.\n" +
-          "Cannot provide both API3 credentials and an access token");
+      throw new SQLInvalidAuthorizationSpecException("Invalid connection params.\n"
+          + "Cannot provide both API3 credentials and an access token");
     } else if (apiLogin) {
       apiConfig.put("client_id", props.get("user"));
       apiConfig.put("client_secret", props.get("password"));
@@ -60,13 +103,13 @@ public class LookerSdkFactory {
       headers.put("Authorization", "token " + props.get("token"));
       apiConfig.put("headers", headers.toString());
     } else {
-      throw new SQLInvalidAuthorizationSpecException("Invalid connection params.\n" +
-          "Missing either API3 credentials or access token");
+      throw new SQLInvalidAuthorizationSpecException(
+          "Invalid connection params.\n" + "Missing either API3 credentials or access token");
     }
 
     ConfigurationProvider finalizedConfig = ApiSettings.fromMap(apiConfig);
     AuthSession session = new AuthSession(finalizedConfig, new Transport(finalizedConfig));
-
+    // need to log in if client_id and client_secret are used
     if (apiLogin) {
       // empty string means no sudo - we won't support this
       session.login("");
@@ -75,7 +118,11 @@ public class LookerSdkFactory {
     return session;
   }
 
-  static public LookerSDK createSdk(String url, Map<String, String> props) throws SQLException {
+  /** Creates an authenticated {@link LookerSDK}.
+   *
+   * @param url the URL of the Looker instance.
+   * @param props map of properties for the session. */
+  public static LookerSDK createSdk(String url, Map<String, String> props) throws SQLException {
     AuthSession session = createAuthSession(url, props);
     return new LookerSDK(session);
   }

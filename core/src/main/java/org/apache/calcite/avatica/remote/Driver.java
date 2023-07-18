@@ -23,9 +23,7 @@ import org.apache.calcite.avatica.ConnectionProperty;
 import org.apache.calcite.avatica.DriverVersion;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.UnregisteredDriver;
-
 import org.apache.calcite.avatica.remote.looker.LookerRemoteMeta;
-
 import org.apache.calcite.avatica.remote.looker.LookerRemoteService;
 
 import org.slf4j.Logger;
@@ -41,6 +39,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+
+import static org.apache.calcite.avatica.remote.Driver.Serialization.LOOKER;
 
 /**
  * Avatica Remote JDBC driver.
@@ -100,7 +100,11 @@ public class Driver extends UnregisteredDriver {
     // Create a single Service and set it on the Connection instance
     final Service service = createService(connection, config);
     connection.setService(service);
-    return new LookerRemoteMeta(connection, service);
+    // TODO: Perhaps `serialization` is the wrong place to add this.
+    if (getSerialization(config) == LOOKER) {
+      return new LookerRemoteMeta(connection, service);
+    }
+    return new RemoteMeta(connection, service);
   }
 
   KerberosConnection createKerberosUtility(ConnectionConfig config) {
@@ -135,6 +139,7 @@ public class Driver extends UnregisteredDriver {
       case PROTOBUF:
         service = new RemoteProtobufService(httpClient, new ProtobufTranslationImpl());
         break;
+      // TODO: Perhaps `serialization` is the wrong place to add this.
       case LOOKER:
         service = new LookerRemoteService(config.url());
         break;

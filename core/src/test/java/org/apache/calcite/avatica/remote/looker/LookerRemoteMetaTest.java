@@ -14,32 +14,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.calcite.avatica.remote.looker;
+
+
+import org.junit.Ignore;
+import org.junit.Test;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
-
-import org.apache.calcite.avatica.AvaticaConnection;
-
-import org.junit.Test;
 
 /**
  * Test for Looker specific functionality in {@link LookerRemoteMeta} implementations.
  */
 public class LookerRemoteMetaTest {
 
+  @Ignore
   @Test
   public void testIt() throws SQLException {
-    Connection connection = DriverManager.getConnection(LookerTestCommon.getUrl(), LookerTestCommon.getBaseProps());
+    Connection connection = DriverManager.getConnection(LookerTestCommon.getUrl(),
+        LookerTestCommon.getBaseProps());
     ResultSet models = connection.getMetaData().getSchemas();
     while (models.next()) {
       System.out.println(models.getObject(1));
     }
-    connection.createStatement().executeQuery("SELECT 10");
-
+    ResultSet test = connection.createStatement().executeQuery("SELECT\n"
+        + "    (FORMAT_TIMESTAMP('%F %T', order_items.created_at )) AS order_items_created_time, "
+        + "'AHHHH' as testy, 1000000 as num\n"
+        + "FROM `bigquery-public-data.thelook_ecommerce.order_items`\n" + "     AS order_items\n"
+        + "GROUP BY\n" + "    1\n" + "ORDER BY\n" + "    1 DESC LIMIT 101");
+    int i = 0;
+    while (test.next()) {
+      i++;
+      System.out.println(
+          i + ": " + test.getObject(1) + "||" + test.getObject(2) + "||" + test.getObject(3));
+    }
+    System.out.println("END !!!!!");
   }
 }

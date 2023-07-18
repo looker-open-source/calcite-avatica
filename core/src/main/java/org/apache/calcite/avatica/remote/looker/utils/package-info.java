@@ -14,47 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.avatica.remote.looker;
 
-import org.apache.calcite.avatica.ConnectionConfigImpl.PropEnv;
-import org.apache.calcite.avatica.ConnectionProperty;
+/**
+ * Static utilities for {@link org.apache.calcite.avatica.remote.looker}
+ */
+package org.apache.calcite.avatica.remote.looker.utils;
 
-import java.util.Properties;
-
-public class LookerConnectionProperty implements ConnectionProperty {
-
-  @Override
-  public String name() {
-    return null;
-  }
-
-  @Override
-  public String camelName() {
-    return null;
-  }
-
-  @Override
-  public Object defaultValue() {
-    return null;
-  }
-
-  @Override
-  public Type type() {
-    return null;
-  }
-
-  @Override
-  public PropEnv wrap(Properties properties) {
-    return null;
-  }
-
-  @Override
-  public boolean required() {
-    return false;
-  }
-
-  @Override
-  public Class valueClass() {
-    return null;
-  }
-}
+// End

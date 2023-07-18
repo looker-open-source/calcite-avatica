@@ -15,32 +15,9 @@
  * limitations under the License.
  */
 
-package org.apache.calcite.avatica.remote.looker.utils;
+/**
+ * Looker specific implementations for JDBC remote procedure calls.
+ */
+package org.apache.calcite.avatica.remote.looker;
 
-import static com.looker.rtl.TransportKt.ok;
-import static com.looker.rtl.TransportKt.parseSDKError;
-
-import com.looker.rtl.SDKErrorInfo;
-import com.looker.rtl.SDKResponse;
-
-import java.sql.SQLException;
-
-public class LookerUtils {
-  public interface LookerSDKCall {
-    SDKResponse call();
-  }
-
-  public static RuntimeException handle(SQLException e) {
-    return new RuntimeException(e);
-  }
-
-  public static <T> T safeSdkCall(LookerSDKCall sdkCall) {
-    try {
-      return ok(sdkCall.call());
-    } catch (Error e) {
-      SDKErrorInfo error = parseSDKError(e.toString());
-      // TODO: Get full errors from error.errors array
-      throw handle(new SQLException(error.getMessage()));
-    }
-  }
-}
+// End package-info.java

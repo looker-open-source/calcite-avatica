@@ -698,7 +698,7 @@ public abstract class AvaticaConnection implements Connection {
   }
 
   /** Creates a statement wrapper around an existing handle. */
-  protected AvaticaStatement lookupStatement(Meta.StatementHandle h)
+  public AvaticaStatement lookupStatement(Meta.StatementHandle h)
       throws SQLException {
     final AvaticaStatement statement = statementMap.get(h.id);
     if (statement != null) {

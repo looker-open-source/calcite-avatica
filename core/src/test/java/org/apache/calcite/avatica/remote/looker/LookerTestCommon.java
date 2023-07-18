@@ -14,24 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.calcite.avatica.remote.looker;
 
 import java.util.Properties;
 
 public class LookerTestCommon {
+  private LookerTestCommon() {
+  }
 
   private static final String BASE_URL = "https://localhost:19999";
   private static final String CLIENT_ID = "f6qG2zPw464yStBrJwrT";
   private static final String CLIENT_SECRET = "KQTpGMPp5mWRQy2Mgrs4SdQT";
   private static final String URL = "jdbc:avatica:remote:url=" + BASE_URL + ";serialization=LOOKER";
 
-  private static final Properties baseProps = new Properties();
+  private static final Properties BASE_PROPS = new Properties();
 
   static {
-    baseProps.put("user", CLIENT_ID);
-    baseProps.put("password", CLIENT_SECRET);
-    baseProps.put("verifySSL", "false");
+    BASE_PROPS.put("user", CLIENT_ID);
+    BASE_PROPS.put("password", CLIENT_SECRET);
+    BASE_PROPS.put("verifySSL", "false");
   }
 
   public static String getUrl() {
@@ -39,7 +40,6 @@ public class LookerTestCommon {
   }
 
   public static Properties getBaseProps() {
-    return baseProps;
+    return BASE_PROPS;
   }
-
 }
