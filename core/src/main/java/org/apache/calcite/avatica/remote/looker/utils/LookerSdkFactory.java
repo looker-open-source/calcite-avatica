@@ -22,12 +22,14 @@ import com.looker.rtl.ConfigurationProvider;
 import com.looker.rtl.SDKErrorInfo;
 import com.looker.rtl.SDKResponse;
 import com.looker.rtl.Transport;
+import com.looker.rtl.TransportKt;
 import com.looker.sdk.ApiSettings;
 import com.looker.sdk.LookerSDK;
 
 import java.sql.SQLException;
 import java.sql.SQLInvalidAuthorizationSpecException;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import static com.looker.rtl.TransportKt.ok;
@@ -37,26 +39,46 @@ import static com.looker.rtl.TransportKt.parseSDKError;
  * Utility class for generating, authenticating, and calling {@link LookerSDK}s.
  */
 public class LookerSdkFactory {
+
   private LookerSdkFactory() {
   }
 
-  /** Format to use for all statement executions */
-  public static final String RESULT_FORMAT = "json_bi";
+  private static final String RESULT_FORMAT = "json_bi";
+  private static final String QUERY_ENDPOINT = "/api/4.0/sql_queries/%s/run/%s";
+  /**
+   * Default buffer size. Could probably be more or less. 1024 chosen for now.
+   */
+  public static final int DEFAULT_STREAM_BUFFER_SIZE = 1024;
 
-  /** Simple functional interface to wrap SDK calls */
+
+  /**
+   * Simple functional interface to wrap SDK calls
+   */
   public interface LookerSDKCall {
+
     SDKResponse call();
   }
 
-  /** Wraps {@link SQLException}s as {@link RuntimeException}s. Almost all exceptions in Avatica are
+  /**
+   * Wraps {@link SQLException}s as {@link RuntimeException}s. Almost all exceptions in Avatica are
    * thrown as RuntimeExceptions. There are 'TODO's to change this behavior but until those are
    * resolved we should do the same. RuntimeExceptions do not have to be part of the method
-   * signature so it does make things nicer to work with. */
+   * signature so it does make things nicer to work with.
+   */
   public static RuntimeException handle(SQLException e) {
     return new RuntimeException(e);
   }
 
-  /** Makes the SDK call and throws any errors as runtime {@link SQLException}s */
+  /**
+   * Makes the API endpoint to run a previously made query.
+   */
+  public static String queryEndpoint(String id) {
+    return String.format(Locale.ROOT, QUERY_ENDPOINT, TransportKt.encodeParam(id), RESULT_FORMAT);
+  }
+
+  /**
+   * Makes the SDK call and throws any errors as runtime {@link SQLException}s
+   */
   public static <T> T safeSdkCall(LookerSDKCall sdkCall) {
     try {
       return ok(sdkCall.call());
@@ -75,14 +97,16 @@ public class LookerSdkFactory {
     return props.containsKey("token");
   }
 
-  /** Creates a {@link AuthSession} to a Looker instance.
+  /**
+   * Creates a {@link AuthSession} to a Looker instance.
    * <p>If {@code client_id} and {@code client_secret} are provided in {@code props} then
    * {@link AuthSession#login} is called on the session. Otherwise, if {@code token} is provided
    * then its value is set as the auth token in the HTTP header for all requests for the session.
    *
    * @param url the URL of the Looker instance.
-   * @param props map of properties for the session. */
-  public static AuthSession createAuthSession(String url, Map<String, String> props)
+   * @param props map of properties for the session.
+   */
+  private static AuthSession createAuthSession(String url, Map<String, String> props)
       throws SQLException {
     Map<String, String> apiConfig = new HashMap<>();
     apiConfig.put("base_url", url);
@@ -99,6 +123,8 @@ public class LookerSdkFactory {
       apiConfig.put("client_id", props.get("user"));
       apiConfig.put("client_secret", props.get("password"));
     } else if (authToken) {
+      // TODO: Set the token for the session using `session.setAuthToken(AuthToken);`.
+      //  Doing so will allow us to rely on the same auth session for the stream query call.
       Map<String, String> headers = new HashMap<>();
       headers.put("Authorization", "token " + props.get("token"));
       apiConfig.put("headers", headers.toString());
@@ -118,10 +144,12 @@ public class LookerSdkFactory {
     return session;
   }
 
-  /** Creates an authenticated {@link LookerSDK}.
+  /**
+   * Creates an authenticated {@link LookerSDK}.
    *
    * @param url the URL of the Looker instance.
-   * @param props map of properties for the session. */
+   * @param props map of properties for the session.
+   */
   public static LookerSDK createSdk(String url, Map<String, String> props) throws SQLException {
     AuthSession session = createAuthSession(url, props);
     return new LookerSDK(session);

@@ -21,6 +21,7 @@ import org.apache.calcite.avatica.ConnectionProperty;
 
 import java.util.Properties;
 
+/** TODO: implement Looker specific connection properties */
 public class LookerConnectionProperty implements ConnectionProperty {
 
   @Override

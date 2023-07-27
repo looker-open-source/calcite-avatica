@@ -20,6 +20,8 @@ package org.apache.calcite.avatica.remote.looker;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -32,24 +34,32 @@ public class LookerRemoteMetaTest {
 
   @Ignore
   @Test
-  public void testIt() throws SQLException {
+  public void testIt() throws SQLException, InterruptedException, IOException {
     Connection connection = DriverManager.getConnection(LookerTestCommon.getUrl(),
         LookerTestCommon.getBaseProps());
     ResultSet models = connection.getMetaData().getSchemas();
     while (models.next()) {
       System.out.println(models.getObject(1));
     }
-    ResultSet test = connection.createStatement().executeQuery("SELECT\n"
-        + "    (FORMAT_TIMESTAMP('%F %T', order_items.created_at )) AS order_items_created_time, "
-        + "'AHHHH' as testy, 1000000 as num\n"
-        + "FROM `bigquery-public-data.thelook_ecommerce.order_items`\n" + "     AS order_items\n"
-        + "GROUP BY\n" + "    1\n" + "ORDER BY\n" + "    1 DESC LIMIT 101");
+
+    String sql =
+        "SELECT (FORMAT_TIMESTAMP('%F %T', order_items.created_at )) AS order_items_created_time, "
+            + "'AHHHH' as testy, 1000000 as num\n"
+            + "FROM `bigquery-public-data.thelook_ecommerce.order_items`\n"
+            + "     AS order_items\n";
+    ResultSet test = connection.createStatement().executeQuery(
+        sql + "UNION ALL\n" + sql + "UNION ALL\n" + sql + "UNION ALL\n" + sql + "UNION ALL\n" + sql
+            + "UNION ALL\n" + sql + "GROUP BY\n" + "    1\n" + "ORDER BY\n" + "    1 DESC");
     int i = 0;
+    PrintWriter writer = new PrintWriter("the-file-name.txt", "UTF-8");
     while (test.next()) {
       i++;
-      System.out.println(
+      writer.println(
           i + ": " + test.getObject(1) + "||" + test.getObject(2) + "||" + test.getObject(3));
+      // System.out.println(
+      //     i + ": " + test.getObject(1) + "||" + test.getObject(2) + "||" + test.getObject(3));
     }
+    writer.close();
     System.out.println("END !!!!!");
   }
 }

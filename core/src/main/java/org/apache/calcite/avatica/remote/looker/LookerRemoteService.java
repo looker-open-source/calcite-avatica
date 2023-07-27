@@ -37,6 +37,7 @@ import static org.apache.calcite.avatica.remote.looker.utils.LookerSdkFactory.sa
  * send Avatica request/responses to a Looker instance via JSON.
  */
 public class LookerRemoteService extends JsonService {
+
   private String url;
   public LookerSDK sdk;
 
@@ -45,16 +46,20 @@ public class LookerRemoteService extends JsonService {
     this.url = url;
   }
 
-  /** Non-overridden {@code apply} methods hit the {@code jdbc_interface} endpoint of the instance.
-   * This endpoint behaves similarly to a standard Avatica server. */
+  /**
+   * Non-overridden {@code apply} methods hit the {@code jdbc_interface} endpoint of the instance.
+   * This endpoint behaves similarly to a standard Avatica server.
+   */
   @Override
   public String apply(String request) {
     JdbcInterface response = safeSdkCall(() -> sdk.jdbc_interface(request));
     return response.getResults();
   }
 
-  /** Helper method to create a {@link ExecuteResponse} for this request. Since we are using the
-   * Looker SDK we need to create this response client side. */
+  /**
+   * Helper method to create a {@link ExecuteResponse} for this request. Since we are using the
+   * Looker SDK we need to create this response client side.
+   */
   ExecuteResponse lookerExecuteResponse(PrepareAndExecuteRequest request, Signature signature,
       LookerFrame lookerFrame) {
     ResultSetResponse rs = new ResultSetResponse(request.connectionId, request.statementId, false,
@@ -62,20 +67,22 @@ public class LookerRemoteService extends JsonService {
     return new ExecuteResponse(Arrays.asList(new ResultSetResponse[]{rs}), false, null);
   }
 
-  /** Handles PrepareAndExecuteRequests by preparing a query via {@link LookerSDK#create_sql_query}
+  /**
+   * Handles PrepareAndExecuteRequests by preparing a query via {@link LookerSDK#create_sql_query}
    * whose response contains a slug. This slug is used to execute the query via
    * {@link LookerSDK#run_sql_query} with the 'json_bi' format.
    *
    * @param request the base Avatica request to convert into a Looker SDK call.
-   * @return a {@link ExecuteResponse} containing a prepared {@link LookerFrame}. */
+   * @return a {@link ExecuteResponse} containing a prepared {@link LookerFrame}.
+   */
   @Override
   public ExecuteResponse apply(PrepareAndExecuteRequest request) {
-    // TODO: b/288031194 - Remove this stubbed query once the Looker SQL endpoints exist
+    // TODO: b/288031194 - Remove this stubbed query once the Looker SQL endpoints exist.
+    //  For dev we first prepare the query to get a signature and then create a query to run.
     String prepSql = "SELECT\n" + "    (FORMAT_TIMESTAMP('%F %T', `order_items.created_time` )) AS "
         + "order_items_created_time, 'AHHHH' as testy, 10000 as num\n"
         + "FROM `thelook`.`order_items`\n" + "     AS order_items\n" + "GROUP BY\n" + "    1\n"
         + "ORDER BY\n" + "    1 DESC";
-
     PrepareRequest prepareRequest = new PrepareRequest("looker-adapter", prepSql, -1);
     PrepareResponse prepare = super.apply(prepareRequest);
     SqlQuery query = safeSdkCall(() -> {
@@ -91,7 +98,9 @@ public class LookerRemoteService extends JsonService {
         LookerFrame.create(query.getSlug()));
   }
 
-  /** Opening a connection initializes a {@link LookerSDK} to communicate with the Looker API. */
+  /**
+   * Opening a connection initializes a {@link LookerSDK} to communicate with the Looker API.
+   */
   @Override
   public OpenConnectionResponse apply(OpenConnectionRequest request) {
     try {
