@@ -156,12 +156,15 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
     if (!sdkTransport.getOptions().getVerifySSL()) {
       trustAllHosts(connection);
     }
+    // timeout is given as seconds
+    int timeout = sdkTransport.getOptions().getTimeout() * 1000;
+    connection.setReadTimeout(timeout);
     connection.setRequestMethod("POST");
+    connection.setRequestProperty("Accept", "application/json");
     connection.setDoOutput(true);
     // Set the auth header as the SDK would
     connection.setRequestProperty("Authorization",
         "token " + authSession.getAuthToken().getAccessToken());
-    connection.setRequestProperty("Accept", "application/json");
     int responseCode = connection.getResponseCode();
     if (responseCode == 200) {
       // grab the input stream and write to the output for the main thread to consume.
