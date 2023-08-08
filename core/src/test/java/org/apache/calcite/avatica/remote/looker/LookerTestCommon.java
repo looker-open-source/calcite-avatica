@@ -25,7 +25,7 @@ public class LookerTestCommon {
   private static final String BASE_URL = "https://localhost:19999";
   private static final String CLIENT_ID = "f6qG2zPw464yStBrJwrT";
   private static final String CLIENT_SECRET = "KQTpGMPp5mWRQy2Mgrs4SdQT";
-  private static final String URL = "jdbc:avatica:remote:url=" + BASE_URL + ";serialization=LOOKER";
+  private static final String URL = "jdbc:looker:url=" + BASE_URL;
 
   private static final Properties BASE_PROPS = new Properties();
 

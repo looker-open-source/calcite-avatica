@@ -17,6 +17,7 @@
 package org.apache.calcite.avatica.remote.looker.utils;
 
 
+
 import com.looker.rtl.AuthSession;
 import com.looker.rtl.ConfigurationProvider;
 import com.looker.rtl.SDKErrorInfo;
@@ -31,9 +32,12 @@ import java.sql.SQLInvalidAuthorizationSpecException;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
 
 import static com.looker.rtl.TransportKt.ok;
 import static com.looker.rtl.TransportKt.parseSDKError;
+
+import static org.apache.calcite.avatica.remote.Service.OpenConnectionRequest.serializeProperties;
 
 /**
  * Utility class for generating, authenticating, and calling {@link LookerSDK}s.
@@ -55,7 +59,6 @@ public class LookerSdkFactory {
    * Simple functional interface to wrap SDK calls
    */
   public interface LookerSDKCall {
-
     SDKResponse call();
   }
 
@@ -123,7 +126,7 @@ public class LookerSdkFactory {
       apiConfig.put("client_id", props.get("user"));
       apiConfig.put("client_secret", props.get("password"));
     } else if (authToken) {
-      // TODO: Set the token for the session using `session.setAuthToken(AuthToken);`.
+      // TODO b/295025684: Set the token for the session using `session.setAuthToken(AuthToken);`.
       //  Doing so will allow us to rely on the same auth session for the stream query call.
       Map<String, String> headers = new HashMap<>();
       headers.put("Authorization", "token " + props.get("token"));
@@ -150,8 +153,9 @@ public class LookerSdkFactory {
    * @param url the URL of the Looker instance.
    * @param props map of properties for the session.
    */
-  public static LookerSDK createSdk(String url, Map<String, String> props) throws SQLException {
-    AuthSession session = createAuthSession(url, props);
+  public static LookerSDK createSdk(String url, Properties props) throws SQLException {
+    Map<String, String> stringProps = serializeProperties(props);
+    AuthSession session = createAuthSession(url, stringProps);
     return new LookerSDK(session);
   }
 }

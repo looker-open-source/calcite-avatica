@@ -19,15 +19,12 @@ package org.apache.calcite.avatica.remote.looker;
 import org.apache.calcite.avatica.Meta.Signature;
 import org.apache.calcite.avatica.remote.JsonService;
 import org.apache.calcite.avatica.remote.looker.LookerRemoteMeta.LookerFrame;
-import org.apache.calcite.avatica.remote.looker.utils.LookerSdkFactory;
 
 import com.looker.sdk.JdbcInterface;
 import com.looker.sdk.LookerSDK;
 import com.looker.sdk.SqlQuery;
 import com.looker.sdk.SqlQueryCreate;
 
-import java.io.IOException;
-import java.sql.SQLException;
 import java.util.Arrays;
 
 import static org.apache.calcite.avatica.remote.looker.utils.LookerSdkFactory.safeSdkCall;
@@ -37,23 +34,10 @@ import static org.apache.calcite.avatica.remote.looker.utils.LookerSdkFactory.sa
  * send Avatica request/responses to a Looker instance via JSON.
  */
 public class LookerRemoteService extends JsonService {
-
-  private String url;
   public LookerSDK sdk;
 
-  public LookerRemoteService(String url) {
-    super();
-    this.url = url;
-  }
-
-  /**
-   * Non-overridden {@code apply} methods hit the {@code jdbc_interface} endpoint of the instance.
-   * This endpoint behaves similarly to a standard Avatica server.
-   */
-  @Override
-  public String apply(String request) {
-    JdbcInterface response = safeSdkCall(() -> sdk.jdbc_interface(request));
-    return response.getResults();
+  void setSdk(LookerSDK sdk) {
+    this.sdk = sdk;
   }
 
   /**
@@ -68,6 +52,19 @@ public class LookerRemoteService extends JsonService {
   }
 
   /**
+   * Handles all non-overridden {@code apply} methods.
+   *
+   * Calls the {@code jdbc_interface} endpoint of the instance which behaves similarly to a standard
+   * Avatica server.
+   */
+  @Override
+  public String apply(String request) {
+    assert null != sdk;
+    JdbcInterface response = safeSdkCall(() -> sdk.jdbc_interface(request));
+    return response.getResults();
+  }
+
+  /**
    * Handles PrepareAndExecuteRequests by preparing a query via {@link LookerSDK#create_sql_query}
    * whose response contains a slug. This slug is used to execute the query via
    * {@link LookerSDK#run_sql_query} with the 'json_bi' format.
@@ -77,9 +74,10 @@ public class LookerRemoteService extends JsonService {
    */
   @Override
   public ExecuteResponse apply(PrepareAndExecuteRequest request) {
+    assert null != sdk;
     // TODO: b/288031194 - Remove this stubbed query once the Looker SQL endpoints exist.
     //  For dev we first prepare the query to get a signature and then create a query to run.
-    String prepSql = "SELECT\n" + "    (FORMAT_TIMESTAMP('%F %T', `order_items.created_time` )) AS "
+    String prepSql = "SELECT\n" + "    (FORMAT_DATE('%F %T', `order_items.created_date` )) AS "
         + "order_items_created_time, 'AHHHH' as testy, 10000 as num\n"
         + "FROM `thelook`.`order_items`\n" + "     AS order_items\n" + "GROUP BY\n" + "    1\n"
         + "ORDER BY\n" + "    1 DESC";
@@ -96,20 +94,5 @@ public class LookerRemoteService extends JsonService {
     });
     return lookerExecuteResponse(request, prepare.statement.signature,
         LookerFrame.create(query.getSlug()));
-  }
-
-  /**
-   * Opening a connection initializes a {@link LookerSDK} to communicate with the Looker API.
-   */
-  @Override
-  public OpenConnectionResponse apply(OpenConnectionRequest request) {
-    try {
-      sdk = LookerSdkFactory.createSdk(url, request.info);
-      return decode(apply(encode(request)), OpenConnectionResponse.class);
-    } catch (IOException e) {
-      throw handle(e);
-    } catch (SQLException e) {
-      throw LookerSdkFactory.handle(e);
-    }
   }
 }
