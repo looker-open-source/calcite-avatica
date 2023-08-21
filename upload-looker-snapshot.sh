@@ -26,17 +26,19 @@ function snapshot_upload {
         -Dversion="$2" \
         -Dpackaging=jar \
         -Dfile="$3" \
-        -DgeneratePom=true \
+        -DgeneratePom=false \
+        -DpomFile="$4"/build/publications/"$5"/pom-default.xml \
         -DrepositoryId=nexus \
         -Durl=https://nexusrepo.looker.com/repository/maven-snapshots/
 }
 
-./gradlew build && (
+
+./gradlew build -x test && ./gradlew jar && ./gradlew generatePom && ./gradlew publishToMavenLocal && (
     VERSION="$(sed -n 's/^calcite\.avatica\.version=\([^ ]*\).*/\1/p' gradle.properties)-SNAPSHOT"
-    snapshot_upload avatica-core "$VERSION" "./core/build/libs/avatica-core-$VERSION.jar"
-    snapshot_upload avatica-server "$VERSION" "./server/build/libs/avatica-server-$VERSION.jar"
-    snapshot_upload avatica-metrics "$VERSION" "./metrics/build/libs/avatica-metrics-$VERSION.jar"
-    snapshot_upload avatica "$VERSION" "./shaded/core/build/libs/avatica-$VERSION-shadow.jar"
+    snapshot_upload avatica-core "$VERSION" "./core/build/libs/avatica-core-$VERSION.jar" "core" "core"
+    snapshot_upload avatica-server "$VERSION" "./server/build/libs/avatica-server-$VERSION.jar" "server" "server"
+    snapshot_upload avatica-metrics "$VERSION" "./metrics/build/libs/avatica-metrics-$VERSION.jar" "metrics" "metrics"
+    snapshot_upload avatica "$VERSION" "./shaded/core/build/libs/avatica-$VERSION-shadow.jar" "shaded/core" "avatica"
     echo
     echo "Done uploading version ${VERSION} to Looker Nexus Snapshots!"
 )
