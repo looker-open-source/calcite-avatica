@@ -22,9 +22,10 @@ import org.apache.calcite.avatica.remote.looker.LookerRemoteMeta.LookerFrame;
 
 import com.looker.sdk.JdbcInterface;
 import com.looker.sdk.LookerSDK;
-import com.looker.sdk.SqlQuery;
-import com.looker.sdk.SqlQueryCreate;
+import com.looker.sdk.SqlInterfaceQuery;
+import com.looker.sdk.WriteSqlInterfaceQueryCreate;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 import static org.apache.calcite.avatica.remote.looker.utils.LookerSdkFactory.safeSdkCall;
@@ -75,24 +76,16 @@ public class LookerRemoteService extends JsonService {
   @Override
   public ExecuteResponse apply(PrepareAndExecuteRequest request) {
     assert null != sdk;
-    // TODO: b/288031194 - Remove this stubbed query once the Looker SQL endpoints exist.
-    //  For dev we first prepare the query to get a signature and then create a query to run.
-    String prepSql = "SELECT\n" + "    (FORMAT_DATE('%F %T', `order_items.created_date` )) AS "
-        + "order_items_created_time, 'AHHHH' as testy, 10000 as num\n"
-        + "FROM `thelook`.`order_items`\n" + "     AS order_items\n" + "GROUP BY\n" + "    1\n"
-        + "ORDER BY\n" + "    1 DESC";
-    PrepareRequest prepareRequest = new PrepareRequest("looker-adapter", prepSql, -1);
-    PrepareResponse prepare = super.apply(prepareRequest);
-    SqlQuery query = safeSdkCall(() -> {
-      SqlQueryCreate sqlQuery = new SqlQueryCreate(
-          /* connection_name=*/ null,
-          /* connection_id=*/ null,
-          /* model_name=*/ "thelook",
-          /* sql=*/ request.sql,
-          /* vis_config=*/ null);
-      return sdk.create_sql_query(sqlQuery);
-    });
-    return lookerExecuteResponse(request, prepare.statement.signature,
-        LookerFrame.create(query.getSlug()));
+    WriteSqlInterfaceQueryCreate queryRequest = new WriteSqlInterfaceQueryCreate(
+        request.sql, /*jdbcClient=*/true);
+    SqlInterfaceQuery preparedQuery = safeSdkCall(
+        () -> sdk.create_sql_interface_query(queryRequest));
+    Signature signature;
+    try {
+      signature = JsonService.MAPPER.readValue(preparedQuery.getSignature(), Signature.class);
+    } catch (IOException e) {
+      throw handle(e);
+    }
+    return lookerExecuteResponse(request, signature, LookerFrame.create(preparedQuery.getId()));
   }
 }

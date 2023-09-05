@@ -778,8 +778,7 @@ public abstract class AvaticaConnection implements Connection {
    * @param <T> The return type from {@code call}.
    */
   public interface CallableWithoutException<T> {
-    // TODO: whoops, broke the "WithoutException" part. Let's make sure we handle errors better.
-    T call() throws SQLException;
+    T call();
   }
 
   /**
@@ -802,9 +801,6 @@ public abstract class AvaticaConnection implements Connection {
           continue;
         }
         throw e;
-        // TODO: don't do this - raise a proper AvaticaRuntimeException for callables
-      } catch (Exception e) {
-        throw new RuntimeException(e);
       }
     }
     if (null != lastException) {

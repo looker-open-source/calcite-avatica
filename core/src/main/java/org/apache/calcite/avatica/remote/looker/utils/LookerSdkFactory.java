@@ -48,7 +48,7 @@ public class LookerSdkFactory {
   }
 
   private static final String RESULT_FORMAT = "json_bi";
-  private static final String QUERY_ENDPOINT = "/api/4.0/sql_queries/%s/run/%s";
+  private static final String QUERY_ENDPOINT = "/api/4.0/sql_interface_queries/%s/run/%s";
   /**
    * Default buffer size. Could probably be more or less. 1024 chosen for now.
    */
@@ -68,14 +68,14 @@ public class LookerSdkFactory {
    * resolved we should do the same. RuntimeExceptions do not have to be part of the method
    * signature so it does make things nicer to work with.
    */
-  public static RuntimeException handle(SQLException e) {
-    return new RuntimeException(e);
+  public static RuntimeException handle(String errorMessage) {
+    return new RuntimeException(errorMessage);
   }
 
   /**
    * Makes the API endpoint to run a previously made query.
    */
-  public static String queryEndpoint(String id) {
+  public static String queryEndpoint(Long id) {
     return String.format(Locale.ROOT, QUERY_ENDPOINT, TransportKt.encodeParam(id), RESULT_FORMAT);
   }
 
@@ -88,7 +88,7 @@ public class LookerSdkFactory {
     } catch (Error e) {
       SDKErrorInfo error = parseSDKError(e.toString());
       // TODO: Get full errors from error.errors array
-      throw handle(new SQLException(error.getMessage()));
+      throw handle(error.getMessage());
     }
   }
 
