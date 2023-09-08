@@ -179,7 +179,6 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
       case Types.DECIMAL:
       case Types.NUMERIC:
         return parser.getDecimalValue();
-
       }
     default:
       throw new IOException("Unable to parse " + columnMetaData.type.rep + " from stream!");
@@ -363,7 +362,7 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
           List<Object> rows = new ArrayList<>();
 
           while (rowsRead < fetchSize) {
-            List<Object> columns = new ArrayList<>();
+            List<Object> columnValues = new ArrayList<>();
             // the signature should _always_ have the correct number of columns.
             // if not, something went wrong during query preparation on the Looker instance.
             for (int i = 0; i < signature.columns.size(); i++) {
@@ -377,10 +376,16 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
               }
 
               // add the value to the column list
-              columns.add(deserializeValue(parser, signature.columns.get(i)));
+              columnValues.add(deserializeValue(parser, signature.columns.get(i)));
             }
 
-            rows.add(columns);
+            // Meta.CursorFactory#deduce will select an OBJECT cursor if there is only a single
+            // column in the signature. This is intended behavior. Since the rows of a frame are
+            // simply `Object` - we could get illegal casts from an ArrayList to the underlying Rep
+            // type if we don't discard the wrapping ArrayList for the single value here.
+            Object row = signature.columns.size() == 1 ? columnValues.get(0) : columnValues;
+
+            rows.add(row);
             rowsRead++;
           }
           // we fetched the allowed number of rows so add the complete frame to the queue

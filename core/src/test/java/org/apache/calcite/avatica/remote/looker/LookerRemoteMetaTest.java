@@ -28,9 +28,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -62,9 +60,6 @@ import static org.junit.Assert.fail;
  * Test for Looker specific functionality in {@link LookerRemoteMeta} implementations.
  */
 public class LookerRemoteMetaTest {
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   private static Map<Rep, Object> supportedRepValues;
   private static Map<Rep, Object> unsupportedRepValues;
