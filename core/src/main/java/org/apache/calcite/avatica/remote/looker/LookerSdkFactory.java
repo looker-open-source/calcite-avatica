@@ -14,9 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.avatica.remote.looker.utils;
-
-
+package org.apache.calcite.avatica.remote.looker;
 
 import com.looker.rtl.AuthSession;
 import com.looker.rtl.ConfigurationProvider;
@@ -49,27 +47,13 @@ public class LookerSdkFactory {
 
   private static final String RESULT_FORMAT = "json_bi";
   private static final String QUERY_ENDPOINT = "/api/4.0/sql_interface_queries/%s/run/%s";
-  /**
-   * Default buffer size. Could probably be more or less. 1024 chosen for now.
-   */
-  public static final int DEFAULT_STREAM_BUFFER_SIZE = 1024;
 
 
   /**
-   * Simple functional interface to wrap SDK calls
+   * Simple interface to wrap SDK calls
    */
   public interface LookerSDKCall {
     SDKResponse call();
-  }
-
-  /**
-   * Wraps {@link SQLException}s as {@link RuntimeException}s. Almost all exceptions in Avatica are
-   * thrown as RuntimeExceptions. There are 'TODO's to change this behavior but until those are
-   * resolved we should do the same. RuntimeExceptions do not have to be part of the method
-   * signature so it does make things nicer to work with.
-   */
-  public static RuntimeException handle(String errorMessage) {
-    return new RuntimeException(errorMessage);
   }
 
   /**
@@ -80,7 +64,7 @@ public class LookerSdkFactory {
   }
 
   /**
-   * Makes the SDK call and throws any errors as runtime {@link SQLException}s
+   * Makes the SDK call and throws any errors as runtime exceptions
    */
   public static <T> T safeSdkCall(LookerSDKCall sdkCall) {
     try {
@@ -88,7 +72,7 @@ public class LookerSdkFactory {
     } catch (Error e) {
       SDKErrorInfo error = parseSDKError(e.toString());
       // TODO: Get full errors from error.errors array
-      throw handle(error.getMessage());
+      throw new RuntimeException(error.getMessage());
     }
   }
 

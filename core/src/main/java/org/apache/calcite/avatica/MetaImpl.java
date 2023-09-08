@@ -1527,12 +1527,12 @@ public abstract class MetaImpl implements Meta {
 
   /** Iterable that yields an iterator over rows coming from a sequence of
    * {@link Meta.Frame}s. */
-  public class FetchIterable implements Iterable<Object> {
+  private class FetchIterable implements Iterable<Object> {
     private final AvaticaStatement stmt;
     private final QueryState state;
     private final Frame firstFrame;
 
-    public FetchIterable(AvaticaStatement stmt, QueryState state, Frame firstFrame) {
+    private FetchIterable(AvaticaStatement stmt, QueryState state, Frame firstFrame) {
       this.stmt = stmt;
       this.state = state;
       this.firstFrame = firstFrame;
@@ -1544,7 +1544,7 @@ public abstract class MetaImpl implements Meta {
   }
 
   /** Iterator over rows coming from a sequence of {@link Meta.Frame}s. */
-  public class FetchIterator implements Iterator<Object> {
+  private class FetchIterator implements Iterator<Object> {
     private final AvaticaStatement stmt;
     private final QueryState state;
     private final int fetchSize;
@@ -1552,7 +1552,7 @@ public abstract class MetaImpl implements Meta {
     private Iterator<Object> rows;
     private long currentOffset = 0;
 
-    public FetchIterator(AvaticaStatement stmt, QueryState state, Frame firstFrame) {
+    private FetchIterator(AvaticaStatement stmt, QueryState state, Frame firstFrame) {
       this.stmt = stmt;
       this.state = state;
       int fetchRowCount;
@@ -1590,14 +1590,7 @@ public abstract class MetaImpl implements Meta {
       return o;
     }
 
-    /** A helper method to call {@link Meta#fetch}. Pulled out from {@link #moveNext()} so that
-     * extending classes can override the fetch implementation without calling out to a Meta. */
-    protected Frame doFetch(StatementHandle h, long currentOffset, int fetchSize)
-        throws NoSuchStatementException, MissingResultsException {
-      return fetch(h, currentOffset, fetchSize);
-    }
-
-    void moveNext() {
+    private void moveNext() {
       for (;;) {
         if (rows.hasNext()) {
           break;
@@ -1608,7 +1601,7 @@ public abstract class MetaImpl implements Meta {
         }
         try {
           // currentOffset updated after element is read from `rows` iterator
-          frame = doFetch(stmt.handle, currentOffset, fetchSize);
+          frame = fetch(stmt.handle, currentOffset, fetchSize);
         } catch (NoSuchStatementException e) {
           resetStatement();
           // re-fetch the batch where we left off

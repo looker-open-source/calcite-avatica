@@ -28,13 +28,14 @@ import com.looker.sdk.WriteSqlInterfaceQueryCreate;
 import java.io.IOException;
 import java.util.Arrays;
 
-import static org.apache.calcite.avatica.remote.looker.utils.LookerSdkFactory.safeSdkCall;
+import static org.apache.calcite.avatica.remote.looker.LookerSdkFactory.safeSdkCall;
 
 /**
  * Implementation of {@link org.apache.calcite.avatica.remote.Service} that uses the Looker SDK to
  * send Avatica request/responses to a Looker instance via JSON.
  */
 public class LookerRemoteService extends JsonService {
+
   public LookerSDK sdk;
 
   void setSdk(LookerSDK sdk) {
@@ -67,7 +68,7 @@ public class LookerRemoteService extends JsonService {
 
   /**
    * Handles PrepareAndExecuteRequests by preparing a query via {@link LookerSDK#create_sql_query}
-   * whose response contains a slug. This slug is used to execute the query via
+   * whose response contains a query id. This id is used to execute the query via
    * {@link LookerSDK#run_sql_query} with the 'json_bi' format.
    *
    * @param request the base Avatica request to convert into a Looker SDK call.
@@ -76,10 +77,12 @@ public class LookerRemoteService extends JsonService {
   @Override
   public ExecuteResponse apply(PrepareAndExecuteRequest request) {
     assert null != sdk;
+
     WriteSqlInterfaceQueryCreate queryRequest = new WriteSqlInterfaceQueryCreate(
         request.sql, /*jdbcClient=*/true);
     SqlInterfaceQuery preparedQuery = safeSdkCall(
         () -> sdk.create_sql_interface_query(queryRequest));
+
     Signature signature;
     try {
       signature = JsonService.MAPPER.readValue(preparedQuery.getSignature(), Signature.class);

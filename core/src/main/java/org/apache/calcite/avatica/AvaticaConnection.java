@@ -698,7 +698,7 @@ public abstract class AvaticaConnection implements Connection {
   }
 
   /** Creates a statement wrapper around an existing handle. */
-  public AvaticaStatement lookupStatement(Meta.StatementHandle h)
+  protected AvaticaStatement lookupStatement(Meta.StatementHandle h)
       throws SQLException {
     final AvaticaStatement statement = statementMap.get(h.id);
     if (statement != null) {
@@ -796,7 +796,7 @@ public abstract class AvaticaConnection implements Connection {
       } catch (AvaticaClientRuntimeException e) {
         lastException = e;
         if (ErrorResponse.MISSING_CONNECTION_ERROR_CODE == e.getErrorCode()
-            && transparentReconnectEnabled) {
+                && transparentReconnectEnabled) {
           this.openConnection();
           continue;
         }

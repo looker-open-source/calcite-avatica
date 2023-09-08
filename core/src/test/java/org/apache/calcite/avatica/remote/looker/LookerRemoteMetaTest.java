@@ -18,6 +18,7 @@ package org.apache.calcite.avatica.remote.looker;
 
 
 import org.apache.calcite.avatica.ColumnMetaData;
+import org.apache.calcite.avatica.ColumnMetaData.AvaticaType;
 import org.apache.calcite.avatica.ColumnMetaData.Rep;
 import org.apache.calcite.avatica.util.ByteString;
 import org.apache.calcite.avatica.util.StructImpl;
@@ -61,6 +62,7 @@ import static org.junit.Assert.fail;
  * Test for Looker specific functionality in {@link LookerRemoteMeta} implementations.
  */
 public class LookerRemoteMetaTest {
+
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
@@ -89,6 +91,9 @@ public class LookerRemoteMetaTest {
     buildingMap.put(Rep.DOUBLE, new Double(1.99));
     buildingMap.put(Rep.STRING, "hello");
     buildingMap.put(Rep.NUMBER, new BigDecimal(1000000));
+    // TODO: We shouldn't need to support OBJECT but MEASUREs are appearing as generic objects in
+    //  the signature
+    buildingMap.put(Rep.OBJECT, 1000);
     supportedRepValues = new HashMap(buildingMap);
     buildingMap.clear();
 
@@ -99,17 +104,16 @@ public class LookerRemoteMetaTest {
     buildingMap.put(Rep.JAVA_UTIL_DATE, new java.util.Date(1000000));
     // Unsupported object types
     buildingMap.put(Rep.ARRAY, new Array[]{});
-    buildingMap.put(Rep.BYTE_STRING, new ByteString(new byte[] {'h', 'e', 'l', 'l', 'o'}));
+    buildingMap.put(Rep.BYTE_STRING, new ByteString(new byte[]{'h', 'e', 'l', 'l', 'o'}));
     buildingMap.put(Rep.PRIMITIVE_CHAR, 'c');
     buildingMap.put(Rep.CHARACTER, new Character('c'));
     buildingMap.put(Rep.MULTISET, new ArrayList());
     buildingMap.put(Rep.STRUCT, new StructImpl(new ArrayList()));
-    buildingMap.put(Rep.OBJECT, new Object());
     unsupportedRepValues = new HashMap(buildingMap);
     buildingMap.clear();
   }
 
-  private JsonParser makeTestParserFromRep(Rep rep, Object value) {
+  private JsonParser makeTestParserFromValue(Object value) throws IOException {
     String template = "{ \"value\": %s }";
     try {
       String valAsJson = mapper.writeValueAsString(value);
@@ -120,9 +124,16 @@ public class LookerRemoteMetaTest {
       jp.nextValue(); // move to value itself
       return jp;
     } catch (IOException e) {
-      fail(e.getMessage());
+      throw e;
     }
-    return null;
+  }
+
+  private ColumnMetaData makeDummyMetadata(Rep rep) {
+    // MEASUREs appear as Objects but typeId is the underlying data type (usually int or double)
+    // See relevant TODO in LookerRemoteMeta#deserializeValue
+    int typeId = rep == Rep.OBJECT ? 4 : rep.typeId;
+    AvaticaType type = new AvaticaType(typeId, rep.name(), rep);
+    return ColumnMetaData.dummy(type, false);
   }
 
   @Test
@@ -130,21 +141,22 @@ public class LookerRemoteMetaTest {
     HashMap allMap = new HashMap();
     allMap.putAll(supportedRepValues);
     allMap.putAll(unsupportedRepValues);
-    Arrays.stream(Rep.values()).forEach(val -> {
-      assertNotNull(allMap.get(val));
-    });
+
+    Arrays.stream(Rep.values()).forEach(val -> assertNotNull(allMap.get(val)));
   }
 
   @Test
   public void deserializeValueThrowsErrorOnUnsupportedType() {
     unsupportedRepValues.forEach((rep, value) -> {
-      JsonParser parser = makeTestParserFromRep(rep, value);
-      thrown.expect(RuntimeException.class);
-      thrown.expectMessage("Unable to parse " + rep.name() + " from stream!");
       try {
-        LookerRemoteMeta.deserializeValue(rep, parser);
+        JsonParser parser = makeTestParserFromValue(value);
+
+        // should throw an IOException
+        LookerRemoteMeta.deserializeValue(parser, makeDummyMetadata(rep));
+        fail("Should have thrown an IOException!");
+
       } catch (IOException e) {
-        fail();
+        assertThat(e.getMessage(), is("Unable to parse " + rep.name() + " from stream!"));
       }
     });
   }
@@ -152,9 +164,12 @@ public class LookerRemoteMetaTest {
   @Test
   public void deserializeValueWorksForSupportedTypes() {
     supportedRepValues.forEach((rep, value) -> {
-      JsonParser parser = makeTestParserFromRep(rep, value);
       try {
-        assertThat(value, is(equalTo(LookerRemoteMeta.deserializeValue(rep, parser))));
+        JsonParser parser = makeTestParserFromValue(value);
+        Object deserializedValue = LookerRemoteMeta.deserializeValue(parser,
+            makeDummyMetadata(rep));
+
+        assertThat(value, is(equalTo(deserializedValue)));
       } catch (IOException e) {
         fail(e.getMessage());
       }
@@ -163,23 +178,21 @@ public class LookerRemoteMetaTest {
 
   @Ignore
   @Test
-  public void testIt() throws SQLException, InterruptedException, IOException {
+  public void testIt() throws SQLException, IOException {
     Connection connection = DriverManager.getConnection(LookerTestCommon.getUrl(),
         LookerTestCommon.getBaseProps());
     ResultSet models = connection.getMetaData().getSchemas();
     while (models.next()) {
       System.out.println(models.getObject(1));
     }
-
-    String sql =
-        "SELECT `orders.status`"
-            + "FROM `thelook`.`order_items`";
+    String sql = "SELECT 'hello world', AGGREGATE(`million_users.avg_id`) as woot FROM `thelook`"
+        + ".`million_users` LIMIT 5";
     ResultSet test = connection.createStatement().executeQuery(sql);
     int i = 0;
     PrintWriter writer = new PrintWriter("the-file-name.txt", "UTF-8");
     while (test.next()) {
       i++;
-      writer.println(i + ": " + test.getObject(1));
+      writer.println(i + ": " + test.getObject(2));
     }
     writer.close();
     System.out.println("END !!!!!");

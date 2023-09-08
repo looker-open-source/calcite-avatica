@@ -18,9 +18,7 @@ package org.apache.calcite.avatica.remote.looker;
 
 import org.apache.calcite.avatica.AvaticaConnection;
 
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.sql.Connection;
 import java.sql.Driver;
@@ -32,32 +30,39 @@ import java.util.Properties;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.fail;
 
 public class DriverTest {
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   @Test
   public void lookerDriverIsRegistered() throws SQLException {
     Driver driver = DriverManager.getDriver("jdbc:looker:url=foobar.com");
+
     assertThat(driver, is(instanceOf(org.apache.calcite.avatica.remote.looker.Driver.class)));
   }
 
   @Test
   public void driverThrowsAuthExceptionForBlankProperties() throws SQLException {
     Properties props = new Properties();
-    Driver driver = DriverManager.getDriver("jdbc:looker:url=foobar.com");
-    thrown.expect(SQLInvalidAuthorizationSpecException.class);
-    thrown.expectMessage("Missing either API3 credentials or access token");
-    driver.connect("jdbc:looker:url=foobar.com", props);
+    try {
+      Driver driver = DriverManager.getDriver("jdbc:looker:url=foobar.com");
+      driver.connect("jdbc:looker:url=foobar.com", props);
+
+      fail("Should have thrown an auth exception!");
+    } catch (SQLInvalidAuthorizationSpecException e) {
+      assertThat(e.getMessage(), is("Invalid connection params.\nMissing either API3 credentials"
+          + " or access token"));
+    }
   }
 
   @Test
   public void createsAvaticaConnections() throws SQLException {
     Properties props = new Properties();
     props.put("token", "foobar");
+
     Driver driver = DriverManager.getDriver("jdbc:looker:url=foobar.com");
     Connection connection = driver.connect("jdbc:looker:url=foobar.com", props);
+
     assertThat(connection, is(instanceOf(AvaticaConnection.class)));
   }
 }

@@ -18,14 +18,17 @@ package org.apache.calcite.avatica.remote.looker;
 
 import org.apache.calcite.avatica.AvaticaConnection;
 import org.apache.calcite.avatica.AvaticaStatement;
+import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.ColumnMetaData.Rep;
 import org.apache.calcite.avatica.Meta;
+import org.apache.calcite.avatica.MissingResultsException;
+import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.calcite.avatica.QueryState;
 import org.apache.calcite.avatica.remote.RemoteMeta;
 import org.apache.calcite.avatica.remote.Service;
 import org.apache.calcite.avatica.remote.Service.PrepareAndExecuteRequest;
+import org.apache.calcite.avatica.remote.Service.PrepareRequest;
 import org.apache.calcite.avatica.remote.TypedValue;
-import org.apache.calcite.avatica.remote.looker.utils.LookerSdkFactory;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
@@ -35,38 +38,90 @@ import com.looker.sdk.LookerSDK;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
-import static org.apache.calcite.avatica.remote.looker.utils.LookerSdkFactory.DEFAULT_STREAM_BUFFER_SIZE;
-
 /**
  * Implementation of Meta that works in tandem with {@link LookerRemoteService} to stream results
  * from the Looker SDK.
  */
 public class LookerRemoteMeta extends RemoteMeta implements Meta {
-
-  /** Authenticated LookerSDK lazily set from LookerRemoteService. */
-  LookerSDK sdk;
+  private final LookerRemoteService lookerService;
 
   public LookerRemoteMeta(AvaticaConnection connection, Service service) {
     super(connection, service);
     // this class _must_ be backed by a LookerRemoteService
     assert service.getClass() == LookerRemoteService.class;
+    lookerService = (LookerRemoteService) service;
+  }
+
+  /**
+   * Constants used in JSON parsing
+   */
+  private static final String ROWS_KEY = "rows";
+  private static final String VALUE_KEY = "value";
+
+  /**
+   * Default queue size. Could probably be more or less. 10 chosen for now.
+   */
+  private static final int DEFAULT_FRAME_QUEUE_SIZE = 10;
+
+  /**
+   * Returns authenticated LookerSDK from LookerRemoteService.
+   */
+  private LookerSDK getSdk() {
+    return lookerService.sdk;
+  }
+
+  /**
+   * A single meta can have multiple running statements. This map keeps track of
+   * {@code FrameEnvelopes}s that belong to a running statement. See {@link #prepareStreamingThread}
+   * for more details.
+   */
+  private final ConcurrentMap<StatementHandle, BlockingQueue<FrameEnvelope>> stmtQueueMap =
+      new ConcurrentHashMap();
+
+  /**
+   * Wrapper for either a {@link Frame} or {@link Exception}. Allows for {@link #stmtQueueMap} to
+   * hold complete Frames and present exceptions when consumers are ready to encounter them.
+   */
+  private class FrameEnvelope {
+
+    final Frame frame;
+    final Exception exception;
+
+    FrameEnvelope(/*@Nullable*/ Frame frame, /*@Nullable*/ Exception exception) {
+      this.frame = frame;
+      this.exception = exception;
+    }
+
+    boolean hasException() {
+      return this.exception != null;
+    }
+  }
+
+  private FrameEnvelope makeFrame(long offset, boolean done, Iterable<Object> rows) {
+    Frame frame = new Frame(offset, done, rows);
+    return new FrameEnvelope(frame, null);
+  }
+
+  private FrameEnvelope makeException(Exception e) {
+    return new FrameEnvelope(null, e);
   }
 
   /**
@@ -74,16 +129,17 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
    * not advance the current token, so they can be called multiple times without changing the state
    * of the parser.
    *
-   * @param columnTypeRep the internal Avatica representation for this value. It is important to
-   *     use the {@link Rep} rather than the type name since Avatica represents most datetime values
-   *     as milliseconds since epoch via {@code long}s or {@code int}s.
+   * @param columnMetaData the {@link ColumnMetaData} for this value. It is important to use the
+   *     {@link Rep} rather than the type name since Avatica represents most datetime values as
+   *     milliseconds since epoch via {@code long}s or {@code int}s.
    * @param parser a JsonParser whose current token is a value from the JSON response. Callers
    *     must ensure that the parser is ready to consume a value token. This method does not change
    *     the state of the parser.
    * @return the parsed value.
    */
-  static Object deserializeValue(Rep columnTypeRep, JsonParser parser) throws IOException {
-    switch (columnTypeRep) {
+  static Object deserializeValue(JsonParser parser, ColumnMetaData columnMetaData)
+      throws IOException {
+    switch (columnMetaData.type.rep) {
     case PRIMITIVE_BOOLEAN:
     case BOOLEAN:
       return parser.getBooleanValue();
@@ -110,44 +166,81 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
     case NUMBER:
       // NUMBER is represented as BigDecimal
       return parser.getDecimalValue();
+    // TODO: MEASURE types are appearing as Objects. This should have been solved by CALCITE-5549.
+    //  Be sure that the signature of a prepared query matches the metadata we see from JDBC.
+    case OBJECT:
+      switch (columnMetaData.type.id) {
+      case Types.INTEGER:
+        return parser.getIntValue();
+      case Types.BIGINT:
+        return parser.getBigIntegerValue();
+      case Types.DOUBLE:
+        return parser.getDoubleValue();
+      case Types.DECIMAL:
+      case Types.NUMERIC:
+        return parser.getDecimalValue();
+
+      }
     default:
-      throw new RuntimeException("Unable to parse " + columnTypeRep + " from stream!");
+      throw new IOException("Unable to parse " + columnMetaData.type.rep + " from stream!");
     }
   }
 
+  @Override
+  public Frame fetch(final StatementHandle h, final long offset, final int fetchMaxRowCount)
+      throws NoSuchStatementException, MissingResultsException {
+    // If this statement was initiated as a LookerFrame then it will have an entry in the queue map
+    if (stmtQueueMap.containsKey(h)) {
+      try {
+        BlockingQueue queue = stmtQueueMap.get(h);
+
+        // `take` blocks until there is an entry in the queue
+        FrameEnvelope nextEnvelope = (FrameEnvelope) queue.take();
+
+        // remove the statement from the map if it has an exception, or it is the last frame
+        if (nextEnvelope.hasException()) {
+          stmtQueueMap.remove(h);
+          throw new RuntimeException(nextEnvelope.exception);
+        } else if (nextEnvelope.frame.done) {
+          stmtQueueMap.remove(h);
+        }
+        return nextEnvelope.frame;
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    // not a streaming query - default to RemoteMeta behavior
+    return super.fetch(h, offset, fetchMaxRowCount);
+  }
+
   /**
-   * An initially empty frame specific to Looker result sets. The {@code statementSlug} is used to
-   * begin a streaming query.
+   * An initially empty frame specific to Looker result sets. {@link #sqlInterfaceQueryId} is used
+   * to begin a streaming query.
    */
   static class LookerFrame extends Frame {
 
     /**
      * A unique ID for the current SQL statement to run. Prepared and set during
-     * {@link LookerRemoteService#apply(PrepareAndExecuteRequest)}.
+     * {@link LookerRemoteService#apply(PrepareAndExecuteRequest)} or
+     * {@link LookerRemoteService#apply(PrepareRequest)}. This is distinct from a statement ID.
+     * Multiple statements may execute the same query ID.
      */
-    public final Long statementId;
+    public final Long sqlInterfaceQueryId;
 
     private LookerFrame(long offset, boolean done, Iterable<Object> rows, Long statementId) {
       super(offset, done, rows);
-      this.statementId = statementId;
+      this.sqlInterfaceQueryId = statementId;
     }
 
     /**
      * Creates a {@code LookerFrame} for the statement slug
      *
-     * @param statementId id for the prepared statement generated by a Looker instance.
+     * @param sqlInterfaceQueryId id for the prepared statement generated by a Looker instance.
      * @return the {@code firstFrame} for the result set.
      */
-    public static final LookerFrame create(Long statementId) {
-      return new LookerFrame(0, false, Collections.emptyList(), statementId);
+    public static final LookerFrame create(Long sqlInterfaceQueryId) {
+      return new LookerFrame(0, false, Collections.emptyList(), sqlInterfaceQueryId);
     }
-  }
-
-  LookerSDK getSdk() {
-    if (null == sdk) {
-      sdk = ((LookerRemoteService) service).sdk;
-    }
-    return sdk;
   }
 
   /**
@@ -160,9 +253,11 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
           public java.security.cert.X509Certificate[] getAcceptedIssuers() {
             return null;
           }
+
           public void checkClientTrusted(java.security.cert.X509Certificate[] certs,
               String authType) {
           }
+
           public void checkServerTrusted(java.security.cert.X509Certificate[] certs,
               String authType) {
           }
@@ -182,199 +277,157 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
 
   /**
    * A regrettable necessity. The Kotlin SDK relies on an outdated Ktor HTTP client based on Kotlin
-   * Coroutines which are a tad difficult to work with in Java. Here we make a HTTP client to handle
-   * the response stream ourselves which is "good enough" for now. This method should be revisited
-   * when the Kotlin SDK has built-in streams.
+   * Coroutines which are difficult to work with in Java. Here we make a HTTP client to handle the
+   * request and input stream ourselves. This adds complexity that would normally be handled by the
+   * SDK. We should revisit this once the SDK has built-in streams.
    *
    * TODO https://github.com/looker-open-source/sdk-codegen/issues/1341:
    *  Add streaming support to the Kotlin SDK.
    */
-  private void streamResponse(String url, OutputStream outputStream) throws IOException {
-    // use some SDK client helpers to tighten up this call
+  private InputStream makeRunQueryRequest(String url) throws IOException {
     AuthSession authSession = getSdk().getAuthSession();
     Transport sdkTransport = authSession.getTransport();
+
     // makes a proper URL from the API endpoint path as the SDK would.
     String endpoint = sdkTransport.makeUrl(url, Collections.emptyMap(), null);
     URL httpsUrl = new URL(endpoint);
     HttpsURLConnection connection = (HttpsURLConnection) httpsUrl.openConnection();
+
     // WARNING: You should only set `verifySSL=false` for local/dev instances!!
     if (!sdkTransport.getOptions().getVerifySSL()) {
       trustAllHosts(connection);
     }
+
     // timeout is given as seconds
     int timeout = sdkTransport.getOptions().getTimeout() * 1000;
     connection.setReadTimeout(timeout);
     connection.setRequestMethod("GET");
     connection.setRequestProperty("Accept", "application/json");
     connection.setDoOutput(true);
+
     // Set the auth header as the SDK would
     connection.setRequestProperty("Authorization",
         "token " + authSession.getAuthToken().getAccessToken());
+
     int responseCode = connection.getResponseCode();
     if (responseCode == 200) {
-      // grab the input stream and write to the output for the main thread to consume.
-      InputStream inputStream = connection.getInputStream();
-      int bytesRead;
-      byte[] buffer = new byte[DEFAULT_STREAM_BUFFER_SIZE];
-      while ((bytesRead = inputStream.read(buffer)) != -1) {
-        outputStream.write(buffer, 0, bytesRead);
-      }
-      outputStream.close();
-      inputStream.close();
+      // return the input stream to parse from.
+      return connection.getInputStream();
     } else {
       throw new IOException("HTTP request failed with status code: " + responseCode);
     }
   }
 
+  private void seekToRows(JsonParser parser) throws IOException {
+    while (parser.nextToken() != null && !ROWS_KEY.equals(parser.currentName())) {
+      // move position to start of `rows`
+    }
+  }
+
+  private void seekToValue(JsonParser parser) throws IOException {
+    while (parser.nextToken() != null && !VALUE_KEY.equals(parser.currentName())) {
+      // seeking to `value` key for the field e.g. `"rows": [{"field_1": {"value": 123 }}]
+    }
+    // now move to the actual value
+    parser.nextToken();
+  }
+
+  private void putExceptionOrFail(BlockingQueue queue, Exception e) {
+    try {
+      // `put` blocks until there is room on the queue but needs a catch
+      queue.put(makeException(e));
+    } catch (InterruptedException ex) {
+      throw new RuntimeException(ex);
+    }
+  }
+
   /**
-   * Prepares a thread to stream query response into an OutputStream. Sets an exception handler for
-   * the thread for reporting.
+   * Prepares a thread to stream a query response into a series of {@link FrameEnvelope}s.
    */
-  private Thread streamingThread(String baseUrl, InputStream in, OutputStream out) {
+  private Thread prepareStreamingThread(String baseUrl, Signature signature, int fetchSize,
+      BlockingQueue frameQueue) {
     Thread stream = new Thread(() -> {
       try {
-        streamResponse(baseUrl, out);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
+        InputStream in = makeRunQueryRequest(baseUrl);
+        JsonParser parser = new JsonFactory().createParser(in);
+
+        int currentOffset = 0;
+
+        while (parser.nextToken() != null) {
+          if (currentOffset == 0) {
+            // TODO: Handle `metadata`. We are currently ignoring it and seeking to `rows` array
+            seekToRows(parser);
+          }
+
+          int rowsRead = 0;
+          List<Object> rows = new ArrayList<>();
+
+          while (rowsRead < fetchSize) {
+            List<Object> columns = new ArrayList<>();
+            // the signature should _always_ have the correct number of columns.
+            // if not, something went wrong during query preparation on the Looker instance.
+            for (int i = 0; i < signature.columns.size(); i++) {
+              seekToValue(parser);
+
+              if (parser.isClosed()) {
+                // the stream is closed - all rows should be accounted for
+                currentOffset += rowsRead;
+                frameQueue.put(makeFrame(currentOffset, /*done=*/true, rows));
+                return;
+              }
+
+              // add the value to the column list
+              columns.add(deserializeValue(parser, signature.columns.get(i)));
+            }
+
+            rows.add(columns);
+            rowsRead++;
+          }
+          // we fetched the allowed number of rows so add the complete frame to the queue
+          currentOffset += rowsRead;
+          frameQueue.put(makeFrame(currentOffset, /*done=*/false, rows));
+        }
+      } catch (Exception e) {
+        // enqueue all exceptions for the main thread to report
+        putExceptionOrFail(frameQueue, e);
       }
     });
-    Thread.UncaughtExceptionHandler exceptionHandler = (th, ex) -> {
-      try {
-        in.close();
-        out.close();
-        throw new RuntimeException(ex);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    };
-    stream.setUncaughtExceptionHandler(exceptionHandler);
     return stream;
   }
 
   /**
    * Creates a streaming iterable that parses a JSON {@link InputStream} into a series of
-   * {@link Frame}s.
+   * {@link FrameEnvelope}s.
    */
   @Override
   public Iterable<Object> createIterable(StatementHandle h, QueryState state, Signature signature,
       List<TypedValue> parameters, Frame firstFrame) {
+    // If this a LookerFrame, then we must be targeting the sql_interface APIs
     if (LookerFrame.class.isAssignableFrom(firstFrame.getClass())) {
       try {
+        // generate the endpoint URL to begin the request
         LookerFrame lookerFrame = (LookerFrame) firstFrame;
-        String endpoint = LookerSdkFactory.queryEndpoint(lookerFrame.statementId);
-        // set up in/out streams
-        PipedOutputStream out = new PipedOutputStream();
-        PipedInputStream in = new PipedInputStream(out);
+        String url = LookerSdkFactory.queryEndpoint(lookerFrame.sqlInterfaceQueryId);
+
         // grab the statement
-        AvaticaStatement stmt = connection.lookupStatement(h);
-        // init a new thread to stream from a Looker instance
-        Thread stream = streamingThread(endpoint, in, out);
-        stream.start();
-        // TODO bug in Avatica - the statement handle never has the signature updated
-        //  workaround by handing the signature to the iterable directly.
-        return new LookerIterable(stmt, state, firstFrame, in, signature);
-      } catch (IOException | SQLException e) {
+        AvaticaStatement stmt = connection.statementMap.get(h.id);
+        if (null == stmt) {
+          throw new NoSuchStatementException(h);
+        }
+
+        // setup queue to place complete frames
+        BlockingQueue frameQueue = new ArrayBlockingQueue<FrameEnvelope>(DEFAULT_FRAME_QUEUE_SIZE);
+
+        // update map so this statement is associated with a queue
+        stmtQueueMap.put(stmt.handle, frameQueue);
+
+        // init and start a new thread to stream from a Looker instance and populate the frameQueue
+        prepareStreamingThread(url, signature, stmt.getFetchSize(), frameQueue).start();
+      } catch (SQLException | NoSuchStatementException e) {
         throw new RuntimeException(e);
       }
     }
-    // if this is a normal Frame from Avatica no special treatment is needed.
+    // always return a FetchIterable - we'll check in LookerRemoteMeta#fetch for any enqueued Frames
     return super.createIterable(h, state, signature, parameters, firstFrame);
-  }
-
-  /**
-   * Iterable that yields an iterator that parses an {@link InputStream} of JSON into a sequence of
-   * {@link Meta.Frame}s.
-   */
-  public class LookerIterable extends FetchIterable implements Iterable<Object> {
-
-    static final String ROWS_KEY = "rows";
-    static final String VALUE_KEY = "value";
-
-    final AvaticaStatement statement;
-    final QueryState state;
-    final Frame firstFrame;
-    final JsonParser parser;
-    final Signature signature;
-
-    LookerIterable(AvaticaStatement statement, QueryState state, Frame firstFrame, InputStream in,
-        Signature signature) {
-      super(statement, state, firstFrame);
-      assert null != in;
-      this.statement = statement;
-      this.state = state;
-      this.firstFrame = firstFrame;
-      this.signature = signature;
-      try {
-        // Create a streaming parser based on the provided InputStream
-        this.parser = new JsonFactory().createParser(in);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    @Override
-    public Iterator<Object> iterator() {
-      return new LookerIterator(statement, state, firstFrame);
-    }
-
-    /**
-     * Iterator that parses an {@link InputStream} of JSON into a sequence of {@link Meta.Frame}s.
-     */
-    public class LookerIterator extends FetchIterator implements Iterator<Object> {
-
-      LookerIterator(AvaticaStatement stmt, QueryState state, Frame firstFrame) {
-        super(stmt, state, firstFrame);
-      }
-
-      private void seekToRows() throws IOException {
-        while (parser.nextToken() != null && !ROWS_KEY.equals(parser.currentName())) {
-          // move position to start of `rows`
-        }
-      }
-
-      private void seekToValue() throws IOException {
-        while (parser.nextToken() != null && !VALUE_KEY.equals(parser.currentName())) {
-          // seeking to `value` key for the field e.g. `"rows": [{"field_1": {"value": 123 }}]
-        }
-        // now move to the actual value
-        parser.nextToken();
-      }
-
-      @Override
-      public Frame doFetch(StatementHandle h, long currentOffset, int fetchSize) {
-        try {
-          if (currentOffset == 0) {
-            // TODO: Handle `metadata`. We are currently ignoring it and seeking to `rows` array
-            seekToRows();
-          }
-          int rowsRead = 0;
-          List<Object> rows = new ArrayList<>();
-          // only read the number of rows requested by the connection config `fetchSize`
-          while (rowsRead < fetchSize) {
-            // TODO: could probably be optimized
-            List<Object> columns = new ArrayList<>();
-            // the signature should _always_ have the correct number of columns.
-            // if not, something went wrong during query preparation on the Looker instance.
-            for (int i = 0; i < signature.columns.size(); i++) {
-              seekToValue();
-              if (parser.isClosed()) {
-                // the stream is closed - all rows should be accounted for
-                return new Frame(currentOffset + rowsRead, true, rows);
-              }
-              // add the value to the column list
-              Object value = LookerRemoteMeta.deserializeValue(signature.columns.get(i).type.rep,
-                  parser);
-              columns.add(value);
-            }
-            rows.add(columns);
-            rowsRead++;
-          }
-          // we fetched the allowed number of rows so return the frame with the current batch
-          return new Frame(currentOffset + rowsRead, false, rows);
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    }
   }
 }

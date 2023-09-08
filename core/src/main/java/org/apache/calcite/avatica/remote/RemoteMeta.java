@@ -40,11 +40,11 @@ import java.util.Map;
  * driver.
  */
 public class RemoteMeta extends MetaImpl {
-  public final Service service;
+  final Service service;
   final Map<String, ConnectionPropertiesImpl> propsMap = new HashMap<>();
   private Map<DatabaseProperty, Object> databaseProperties;
 
-  public RemoteMeta(AvaticaConnection connection, Service service) {
+  protected RemoteMeta(AvaticaConnection connection, Service service) {
     super(connection);
     this.service = service;
   }

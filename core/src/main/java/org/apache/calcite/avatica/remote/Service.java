@@ -38,7 +38,6 @@ import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.UnsafeByteOperations;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.sql.SQLException;
@@ -147,7 +146,7 @@ public interface Service {
           name = "prepareAndExecuteBatch"),
       @JsonSubTypes.Type(value = ExecuteBatchRequest.class, name = "executeBatch") })
   abstract class Request extends Base {
-    abstract Response accept(Service service) throws IOException;
+    abstract Response accept(Service service);
     abstract Request deserialize(Message genericMsg);
     abstract Message serialize();
   }
@@ -949,7 +948,7 @@ public interface Service {
       this.maxRowsInFirstFrame = maxRowsInFirstFrame;
     }
 
-    @Override ExecuteResponse accept(Service service) throws IOException {
+    @Override ExecuteResponse accept(Service service) {
       return service.apply(this);
     }
 

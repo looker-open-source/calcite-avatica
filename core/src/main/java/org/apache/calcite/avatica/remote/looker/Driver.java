@@ -21,7 +21,6 @@ import org.apache.calcite.avatica.DriverVersion;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.UnregisteredDriver;
 import org.apache.calcite.avatica.remote.Service;
-import org.apache.calcite.avatica.remote.looker.utils.LookerSdkFactory;
 
 import com.looker.sdk.LookerSDK;
 
@@ -29,6 +28,13 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;
 
+/**
+ * JDBC Driver for Looker's SQL Interface. Communicates with a Looker instance via
+ * {@link LookerSDK}. Backed by Looker-specific {@link LookerRemoteMeta} and
+ * {@link LookerRemoteService}.
+ *
+ * Use 'jdbc:looker' as the protocol to select this over the default remote Avatica driver.
+ */
 public class Driver extends UnregisteredDriver {
 
   static {
@@ -69,12 +75,14 @@ public class Driver extends UnregisteredDriver {
     AvaticaConnection conn = (AvaticaConnection) super.connect(url, info);
 
     if (conn == null) {
-      // It's not an url for our driver
+      // the URL did not match Looker's JDBC connection string prefix
       return null;
     }
-    Service service = conn.getService();
+
     // the `looker` driver should always have a matching Service
+    Service service = conn.getService();
     assert service instanceof LookerRemoteService;
+
     // create and set LookerSDK for the connection
     LookerSDK sdk = LookerSdkFactory.createSdk(conn.config().url(), info);
     ((LookerRemoteService) service).setSdk(sdk);
