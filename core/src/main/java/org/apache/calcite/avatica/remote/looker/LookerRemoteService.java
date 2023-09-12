@@ -61,7 +61,7 @@ public class LookerRemoteService extends JsonService {
    */
   @Override
   public String apply(String request) {
-    assert null != sdk;
+    assert null != sdk : "No authenticated SDK";
     JdbcInterface response = safeSdkCall(() -> sdk.jdbc_interface(request));
     return response.getResults();
   }

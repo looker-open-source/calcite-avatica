@@ -66,7 +66,7 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
   public LookerRemoteMeta(AvaticaConnection connection, Service service) {
     super(connection, service);
     // this class _must_ be backed by a LookerRemoteService
-    assert service.getClass() == LookerRemoteService.class;
+    assert LookerRemoteService.class.isAssignableFrom(service.getClass());
     lookerService = (LookerRemoteService) service;
   }
 
@@ -226,7 +226,7 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
      */
     public final Long sqlInterfaceQueryId;
 
-    private LookerFrame(long offset, boolean done, Iterable<Object> rows, Long statementId) {
+    LookerFrame(long offset, boolean done, Iterable<Object> rows, Long statementId) {
       super(offset, done, rows);
       this.sqlInterfaceQueryId = statementId;
     }
@@ -283,7 +283,7 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
    * TODO https://github.com/looker-open-source/sdk-codegen/issues/1341:
    *  Add streaming support to the Kotlin SDK.
    */
-  private InputStream makeRunQueryRequest(String url) throws IOException {
+  protected InputStream makeRunQueryRequest(String url) throws IOException {
     AuthSession authSession = getSdk().getAuthSession();
     Transport sdkTransport = authSession.getTransport();
 
@@ -343,7 +343,7 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
   /**
    * Prepares a thread to stream a query response into a series of {@link FrameEnvelope}s.
    */
-  private Thread prepareStreamingThread(String baseUrl, Signature signature, int fetchSize,
+  protected Thread prepareStreamingThread(String baseUrl, Signature signature, int fetchSize,
       BlockingQueue frameQueue) {
     Thread stream = new Thread(() -> {
       try {
