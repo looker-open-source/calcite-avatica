@@ -44,7 +44,7 @@ public class RemoteMeta extends MetaImpl {
   final Map<String, ConnectionPropertiesImpl> propsMap = new HashMap<>();
   private Map<DatabaseProperty, Object> databaseProperties;
 
-  protected RemoteMeta(AvaticaConnection connection, Service service) {
+  public RemoteMeta(AvaticaConnection connection, Service service) {
     super(connection);
     this.service = service;
   }
