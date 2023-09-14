@@ -186,7 +186,9 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
       // return the input stream to parse from.
       return connection.getInputStream();
     } else {
-      throw new IOException("HTTP request failed with status code: " + responseCode);
+      // TODO b/300529001: Better error handling
+      throw new RuntimeException("Query run failed with status code: " + responseCode + ": "
+          + connection.getResponseMessage());
     }
   }
 
@@ -250,7 +252,8 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
         }
 
         // setup queue to place complete frames
-        BlockingQueue<LookerFrameEnvelope> frameQueue = new ArrayBlockingQueue(DEFAULT_FRAME_QUEUE_SIZE);
+        BlockingQueue<LookerFrameEnvelope> frameQueue = new ArrayBlockingQueue(
+            DEFAULT_FRAME_QUEUE_SIZE);
 
         // update map so this statement is associated with a queue
         stmtQueueMap.put(stmt.handle.id, frameQueue);

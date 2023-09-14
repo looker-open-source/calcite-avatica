@@ -40,7 +40,7 @@ import static org.junit.Assert.assertNotNull;
  *
  * {@link #withStubbedResponse} must be called before creating a connection.
  */
-public class StubbedLookerDriver extends Driver {
+public class StubbedLookerDriver extends LookerDriver {
 
   String stubbedSignature;
   String stubbedResponse;
@@ -53,7 +53,7 @@ public class StubbedLookerDriver extends Driver {
    *     {@code GET /sql_interface_queries/:id/run/json_bi}.
    * @return the driver with a stubbed {@link Service} and {@link Meta}.
    */
-  public Driver withStubbedResponse(String signature, String response) {
+  public LookerDriver withStubbedResponse(String signature, String response) {
     this.stubbedSignature = signature;
     this.stubbedResponse = response;
 

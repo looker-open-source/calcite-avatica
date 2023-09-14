@@ -72,7 +72,7 @@ public class LookerSdkFactory {
     } catch (Error e) {
       SDKErrorInfo error = parseSDKError(e.toString());
       // TODO: Get full errors from error.errors array
-      throw new RuntimeException(error.getMessage());
+      throw new RuntimeException(error.getMessage(), e);
     }
   }
 

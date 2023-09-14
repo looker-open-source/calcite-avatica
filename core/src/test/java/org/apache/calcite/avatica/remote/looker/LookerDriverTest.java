@@ -51,7 +51,7 @@ public class LookerDriverTest {
   public void driverIsRegistered() throws SQLException {
     Driver driver = DriverManager.getDriver("jdbc:looker:url=foobar.com");
 
-    assertThat(driver, is(instanceOf(org.apache.calcite.avatica.remote.looker.Driver.class)));
+    assertThat(driver, is(instanceOf(LookerDriver.class)));
   }
 
   @Test
