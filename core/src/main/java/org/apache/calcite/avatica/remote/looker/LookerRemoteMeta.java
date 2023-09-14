@@ -82,7 +82,7 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
    * {@code FrameEnvelopes}s that belong to a running statement. See {@link #prepareStreamingThread}
    * for more details.
    */
-  final ConcurrentMap<Integer, BlockingQueue<FrameEnvelope>> stmtQueueMap =
+  final ConcurrentMap<Integer, BlockingQueue<LookerFrameEnvelope>> stmtQueueMap =
       new ConcurrentHashMap<>();
 
   /**
@@ -120,17 +120,21 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
    */
   private void trustAllHosts(HttpsURLConnection connection) {
     // Create a trust manager that does not validate certificate chains
-    TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
-      public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-        return null;
-      }
+    TrustManager[] trustAllCerts = new TrustManager[]{
+        new X509TrustManager() {
+          public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+            return null;
+          }
 
-      public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-      }
+          public void checkClientTrusted(java.security.cert.X509Certificate[] certs,
+              String authType) {
+          }
 
-      public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-      }
-    }};
+          public void checkServerTrusted(java.security.cert.X509Certificate[] certs,
+              String authType) {
+          }
+        }
+    };
     // Create all-trusting host name verifier
     HostnameVerifier trustAllHostNames = (hostname, session) -> true;
     try {
@@ -187,10 +191,10 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
   }
 
   /**
-   * Prepares a thread to stream a query response into a series of {@link FrameEnvelope}s.
+   * Prepares a thread to stream a query response into a series of {@link LookerFrameEnvelope}s.
    */
   protected Thread prepareStreamingThread(String baseUrl, Signature signature, int fetchSize,
-      BlockingQueue<FrameEnvelope> frameQueue) throws IOException {
+      BlockingQueue<LookerFrameEnvelope> frameQueue) throws IOException {
 
     InputStream in = makeRunQueryRequest(baseUrl);
     LookerResponseParser parser = new LookerResponseParser(frameQueue);
@@ -204,10 +208,10 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
     // If this statement was initiated as a LookerFrame then it will have an entry in the queue map
     if (stmtQueueMap.containsKey(h.id)) {
       try {
-        BlockingQueue<FrameEnvelope> queue = stmtQueueMap.get(h.id);
+        BlockingQueue<LookerFrameEnvelope> queue = stmtQueueMap.get(h.id);
 
         // `take` blocks until there is an entry in the queue
-        FrameEnvelope nextEnvelope = queue.take();
+        LookerFrameEnvelope nextEnvelope = queue.take();
 
         // remove the statement from the map if it has an exception, or it is the last frame
         if (nextEnvelope.hasException()) {
@@ -227,7 +231,7 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
 
   /**
    * Creates a streaming iterable that parses a JSON {@link InputStream} into a series of
-   * {@link FrameEnvelope}s.
+   * {@link LookerFrameEnvelope}s.
    */
   @Override
   public Iterable<Object> createIterable(StatementHandle h, QueryState state, Signature signature,
@@ -246,7 +250,7 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
         }
 
         // setup queue to place complete frames
-        BlockingQueue<FrameEnvelope> frameQueue = new ArrayBlockingQueue(DEFAULT_FRAME_QUEUE_SIZE);
+        BlockingQueue<LookerFrameEnvelope> frameQueue = new ArrayBlockingQueue(DEFAULT_FRAME_QUEUE_SIZE);
 
         // update map so this statement is associated with a queue
         stmtQueueMap.put(stmt.handle.id, frameQueue);

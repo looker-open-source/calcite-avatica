@@ -46,6 +46,7 @@ import java.util.Map;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
@@ -164,5 +165,19 @@ public class LookerResponseParserTest {
         fail(e.getMessage());
       }
     });
+  }
+
+  @Test
+  public void returnsNullIfValueIsNull() {
+    try {
+      JsonParser parser = makeTestParserFromValue(null);
+      Object deserializedValue = LookerResponseParser.deserializeValue(parser,
+          makeDummyMetadata(Rep.DOUBLE));
+
+      assertNull(deserializedValue);
+
+    } catch (IOException e) {
+      fail("Should not throw an exception!");
+    }
   }
 }

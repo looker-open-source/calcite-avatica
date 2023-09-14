@@ -23,33 +23,33 @@ import org.apache.calcite.avatica.Meta.Frame;
  * {@link LookerRemoteMeta#stmtQueueMap} to hold complete Frames and present exceptions when
  * consumers are ready to encounter them.
  */
-class FrameEnvelope {
+class LookerFrameEnvelope {
 
   final Frame frame;
   final Exception exception;
 
-  private FrameEnvelope(/*@Nullable*/ Frame frame, /*@Nullable*/ Exception exception) {
+  private LookerFrameEnvelope(/*@Nullable*/ Frame frame, /*@Nullable*/ Exception exception) {
     this.frame = frame;
     this.exception = exception;
   }
 
   /**
-   * Constructs a FrameEnvelope with a {@link Frame}.
+   * Constructs a LookerFrameEnvelope with a {@link Frame}.
    */
-  public static FrameEnvelope ok(long offset, boolean done, Iterable<Object> rows) {
+  public static LookerFrameEnvelope ok(long offset, boolean done, Iterable<Object> rows) {
     Frame frame = new Frame(offset, done, rows);
-    return new FrameEnvelope(frame, null);
+    return new LookerFrameEnvelope(frame, null);
   }
 
   /**
-   * Constructs a FrameEnvelope to hold an exception
+   * Constructs a LookerFrameEnvelope to hold an exception
    */
-  public static FrameEnvelope error(Exception e) {
-    return new FrameEnvelope(null, e);
+  public static LookerFrameEnvelope error(Exception e) {
+    return new LookerFrameEnvelope(null, e);
   }
 
   /**
-   * Whether this FrameEnvelope holds an exception. If true, the envelope holds no {@link Frame}.
+   * Whether this LookerFrameEnvelope holds an exception. If true, the envelope holds no {@link Frame}.
    */
   public boolean hasException() {
     return this.exception != null;

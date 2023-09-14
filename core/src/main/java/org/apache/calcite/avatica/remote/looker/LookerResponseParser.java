@@ -31,6 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
+import static com.fasterxml.jackson.core.JsonToken.VALUE_NULL;
+
 public class LookerResponseParser {
 
   /**
@@ -39,9 +41,9 @@ public class LookerResponseParser {
   private static final String ROWS_KEY = "rows";
   private static final String VALUE_KEY = "value";
 
-  private final BlockingQueue<FrameEnvelope> queue;
+  private final BlockingQueue<LookerFrameEnvelope> queue;
 
-  LookerResponseParser(BlockingQueue<FrameEnvelope> queue) {
+  LookerResponseParser(BlockingQueue<LookerFrameEnvelope> queue) {
     assert queue != null : "null queue!";
 
     this.queue = queue;
@@ -62,6 +64,10 @@ public class LookerResponseParser {
    */
   static Object deserializeValue(JsonParser parser, ColumnMetaData columnMetaData)
       throws IOException {
+    // don't attempt to parse null values
+    if (parser.currentToken() == VALUE_NULL) {
+      return null;
+    }
     switch (columnMetaData.type.rep) {
     case PRIMITIVE_BOOLEAN:
     case BOOLEAN:
@@ -125,7 +131,7 @@ public class LookerResponseParser {
   private void putExceptionOrFail(Exception e) {
     try {
       // `put` blocks until there is room on the queue but needs a catch
-      queue.put(FrameEnvelope.error(e));
+      queue.put(LookerFrameEnvelope.error(e));
     } catch (InterruptedException ex) {
       throw new RuntimeException(ex);
     }
@@ -133,7 +139,7 @@ public class LookerResponseParser {
 
   /**
    * Takes an input stream from a Looker query request and parses it into a series of
-   * {@link FrameEnvelope}s. Each FrameEnvelope is enqueued in the {@link #queue} of the parser.
+   * {@link LookerFrameEnvelope}s. Each LookerFrameEnvelope is enqueued in the {@link #queue} of the parser.
    *
    * @param in the {@link InputStream} to parse.
    * @param signature the {@link Signature} for the statement. Needed to access column metadata
@@ -167,7 +173,7 @@ public class LookerResponseParser {
             if (parser.isClosed()) {
               // the stream is closed - all rows should be accounted for
               currentOffset += rowsRead;
-              queue.put(FrameEnvelope.ok(currentOffset, /*done=*/true, rows));
+              queue.put(LookerFrameEnvelope.ok(currentOffset, /*done=*/true, rows));
               return;
             }
 
@@ -186,7 +192,7 @@ public class LookerResponseParser {
         }
         // we fetched the allowed number of rows so add the complete frame to the queue
         currentOffset += rowsRead;
-        queue.put(FrameEnvelope.ok(currentOffset, /*done=*/false, rows));
+        queue.put(LookerFrameEnvelope.ok(currentOffset, /*done=*/false, rows));
       }
     } catch (Exception e) {
       // enqueue all exceptions for the main thread to report
