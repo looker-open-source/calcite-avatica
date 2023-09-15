@@ -165,8 +165,7 @@ public class LookerResponseParser {
 
         while (rowsRead < fetchSize) {
           List<Object> columnValues = new ArrayList<>();
-          // the signature should _always_ have the correct number of columns.
-          // if not, something went wrong during query preparation on the Looker instance.
+
           for (int i = 0; i < signature.columns.size(); i++) {
             seekToValue(parser);
 
@@ -195,7 +194,7 @@ public class LookerResponseParser {
         queue.put(LookerFrameEnvelope.ok(currentOffset, /*done=*/false, rows));
       }
     } catch (Exception e) {
-      // enqueue all exceptions for the main thread to report
+      // enqueue the first exception encountered
       putExceptionOrFail(e);
     }
   }

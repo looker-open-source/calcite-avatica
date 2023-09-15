@@ -22,6 +22,7 @@ import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.calcite.avatica.QueryState;
+import org.apache.calcite.avatica.remote.JsonService;
 import org.apache.calcite.avatica.remote.RemoteMeta;
 import org.apache.calcite.avatica.remote.Service;
 import org.apache.calcite.avatica.remote.Service.PrepareAndExecuteRequest;
@@ -32,18 +33,23 @@ import com.looker.rtl.AuthSession;
 import com.looker.rtl.Transport;
 import com.looker.sdk.LookerSDK;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -156,7 +162,7 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
    * TODO https://github.com/looker-open-source/sdk-codegen/issues/1341:
    *  Add streaming support to the Kotlin SDK.
    */
-  protected InputStream makeRunQueryRequest(String url) throws IOException {
+  protected InputStream makeRunQueryRequest(String url) throws IOException, SQLException {
     AuthSession authSession = getSdk().getAuthSession();
     Transport sdkTransport = authSession.getTransport();
 
@@ -186,9 +192,14 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
       // return the input stream to parse from.
       return connection.getInputStream();
     } else {
-      // TODO b/300529001: Better error handling
-      throw new RuntimeException("Query run failed with status code: " + responseCode + ": "
-          + connection.getResponseMessage());
+      InputStream errorIn = connection.getErrorStream();
+      String errorMessage =
+          new BufferedReader(new InputStreamReader(errorIn, StandardCharsets.UTF_8))
+              .lines()
+              .collect(Collectors.joining("\n"));
+      HashMap<String, String> errorMap = JsonService.MAPPER.readValue(errorMessage, HashMap.class);
+      throw new SQLException("Looker generated SQL failed to execute: "
+          + errorMap.getOrDefault("message", ""));
     }
   }
 
@@ -196,7 +207,7 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
    * Prepares a thread to stream a query response into a series of {@link LookerFrameEnvelope}s.
    */
   protected Thread prepareStreamingThread(String baseUrl, Signature signature, int fetchSize,
-      BlockingQueue<LookerFrameEnvelope> frameQueue) throws IOException {
+      BlockingQueue<LookerFrameEnvelope> frameQueue) throws IOException, SQLException {
 
     InputStream in = makeRunQueryRequest(baseUrl);
     LookerResponseParser parser = new LookerResponseParser(frameQueue);
