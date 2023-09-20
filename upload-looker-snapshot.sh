@@ -29,12 +29,12 @@ function snapshot_upload {
         -DgeneratePom=false \
         -DpomFile="$4"/build/publications/"$5"/pom-default.xml \
         -DrepositoryId=nexus \
-        -Durl=https://nexusrepo.looker.com/repository/maven-snapshots/
+        -Durl=https://nexusrepo.looker.com/repository/maven-releases/
 }
 
 
-./gradlew build -x test && ./gradlew jar && ./gradlew generatePom && ./gradlew publishToMavenLocal && (
-    VERSION="$(sed -n 's/^calcite\.avatica\.version=\([^ ]*\).*/\1/p' gradle.properties)-SNAPSHOT"
+./gradlew -Prelease jar && ./gradlew -Prelease generatePom && (
+    VERSION="$(sed -n 's/^calcite\.avatica\.version=\([^ ]*\).*/\1/p' gradle.properties)"
     snapshot_upload avatica-core "$VERSION" "./core/build/libs/avatica-core-$VERSION.jar" "core" "core"
     snapshot_upload avatica-server "$VERSION" "./server/build/libs/avatica-server-$VERSION.jar" "server" "server"
     snapshot_upload avatica-metrics "$VERSION" "./metrics/build/libs/avatica-metrics-$VERSION.jar" "metrics" "metrics"
