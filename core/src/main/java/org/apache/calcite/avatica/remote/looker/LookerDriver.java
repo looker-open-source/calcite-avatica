@@ -17,6 +17,7 @@
 package org.apache.calcite.avatica.remote.looker;
 
 import org.apache.calcite.avatica.AvaticaConnection;
+import org.apache.calcite.avatica.ConnectStringParser;
 import org.apache.calcite.avatica.DriverVersion;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.UnregisteredDriver;
@@ -83,8 +84,11 @@ public class LookerDriver extends UnregisteredDriver {
     Service service = conn.getService();
     assert service instanceof LookerRemoteService;
 
+    // puts all additional url params into properties
+    Properties properties = ConnectStringParser.parse(url, info);
+
     // create and set LookerSDK for the connection
-    LookerSDK sdk = LookerSdkFactory.createSdk(conn.config().url(), info);
+    LookerSDK sdk = LookerSdkFactory.createSdk(conn.config().url(), properties);
     ((LookerRemoteService) service).setSdk(sdk);
     return conn;
   }

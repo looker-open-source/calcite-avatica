@@ -30,6 +30,8 @@ public class LookerTestCommon {
 
   private static final Properties BASE_PROPS = new Properties();
 
+  static final String USER_AGENT = ";userAgent=FooBarInc";
+
   static {
     BASE_PROPS.put("user", CLIENT_ID);
     BASE_PROPS.put("password", CLIENT_SECRET);

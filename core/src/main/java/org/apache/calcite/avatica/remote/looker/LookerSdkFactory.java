@@ -17,6 +17,7 @@
 package org.apache.calcite.avatica.remote.looker;
 
 import com.looker.rtl.AuthSession;
+import com.looker.rtl.AuthToken;
 import com.looker.rtl.ConfigurationProvider;
 import com.looker.rtl.SDKErrorInfo;
 import com.looker.rtl.SDKResponse;
@@ -47,6 +48,11 @@ public class LookerSdkFactory {
 
   private static final String RESULT_FORMAT = "json_bi";
   private static final String QUERY_ENDPOINT = "/api/4.0/sql_interface_queries/%s/run/%s";
+
+  /**
+   * 1 hour in seconds. This is not configurable.
+   */
+  private static final Long SESSION_LENGTH = 3600L;
 
 
   /**
@@ -106,26 +112,36 @@ public class LookerSdkFactory {
     if (apiLogin && authToken) {
       throw new SQLInvalidAuthorizationSpecException("Invalid connection params.\n"
           + "Cannot provide both API3 credentials and an access token");
-    } else if (apiLogin) {
-      apiConfig.put("client_id", props.get("user"));
-      apiConfig.put("client_secret", props.get("password"));
-    } else if (authToken) {
-      // TODO b/295025684: Set the token for the session using `session.setAuthToken(AuthToken);`.
-      //  Doing so will allow us to rely on the same auth session for the stream query call.
-      Map<String, String> headers = new HashMap<>();
-      headers.put("Authorization", "token " + props.get("token"));
-      apiConfig.put("headers", headers.toString());
-    } else {
+    }
+    if (!apiLogin && !authToken) {
       throw new SQLInvalidAuthorizationSpecException(
           "Invalid connection params.\n" + "Missing either API3 credentials or access token");
     }
 
+    if (apiLogin) {
+      apiConfig.put("client_id", props.get("user"));
+      apiConfig.put("client_secret", props.get("password"));
+    }
+
     ConfigurationProvider finalizedConfig = ApiSettings.fromMap(apiConfig);
+
+    String userAgent = props.get("userAgent");
+    if (userAgent != null) {
+      Map<String, String> headers = finalizedConfig.getHeaders();
+      headers.put("User-Agent", props.get("userAgent"));
+      finalizedConfig.setHeaders(headers);
+    }
+
     AuthSession session = new AuthSession(finalizedConfig, new Transport(finalizedConfig));
+
     // need to log in if client_id and client_secret are used
     if (apiLogin) {
       // empty string means no sudo - we won't support this
       session.login("");
+    } else if (authToken) {
+      // set the auth token if one was supplied from the OAuth flow
+      session.setAuthToken(
+          new AuthToken(props.get("token"), "Bearer", SESSION_LENGTH, null));
     }
 
     return session;

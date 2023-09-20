@@ -43,7 +43,7 @@ public class LookerResponseParser {
 
   private final BlockingQueue<LookerFrameEnvelope> queue;
 
-  LookerResponseParser(BlockingQueue<LookerFrameEnvelope> queue) {
+  public LookerResponseParser(BlockingQueue<LookerFrameEnvelope> queue) {
     assert queue != null : "null queue!";
 
     this.queue = queue;

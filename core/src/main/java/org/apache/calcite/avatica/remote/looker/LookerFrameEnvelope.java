@@ -23,14 +23,22 @@ import org.apache.calcite.avatica.Meta.Frame;
  * {@link LookerRemoteMeta#stmtQueueMap} to hold complete Frames and present exceptions when
  * consumers are ready to encounter them.
  */
-class LookerFrameEnvelope {
+public class LookerFrameEnvelope {
 
-  final Frame frame;
-  final Exception exception;
+  private final Frame frame;
+  private final Exception exception;
 
   private LookerFrameEnvelope(/*@Nullable*/ Frame frame, /*@Nullable*/ Exception exception) {
     this.frame = frame;
     this.exception = exception;
+  }
+
+  public Frame getFrame() {
+    return this.frame;
+  }
+
+  public Exception getException() {
+    return this.exception;
   }
 
   /**

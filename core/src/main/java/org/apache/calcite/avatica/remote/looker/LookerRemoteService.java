@@ -21,9 +21,9 @@ import org.apache.calcite.avatica.Meta.StatementHandle;
 import org.apache.calcite.avatica.remote.JsonService;
 import org.apache.calcite.avatica.remote.looker.LookerRemoteMeta.LookerFrame;
 
-import com.looker.sdk.JdbcInterface;
 import com.looker.sdk.LookerSDK;
 import com.looker.sdk.SqlInterfaceQuery;
+import com.looker.sdk.SqlInterfaceQueryMetadata;
 import com.looker.sdk.WriteSqlInterfaceQueryCreate;
 
 import java.io.IOException;
@@ -108,13 +108,13 @@ public class LookerRemoteService extends JsonService {
   /**
    * Handles all non-overridden {@code apply} methods.
    *
-   * Calls the {@code jdbc_interface} endpoint of the instance which behaves similarly to a standard
-   * Avatica server.
+   * Calls the {@code sql_interface_metadata} endpoint of the instance which behaves similarly to a
+   * standard Avatica server.
    */
   @Override
   public String apply(String request) {
     checkSdk();
-    JdbcInterface response = safeSdkCall(() -> sdk.jdbc_interface(request));
+    SqlInterfaceQueryMetadata response = safeSdkCall(() -> sdk.sql_interface_metadata(request));
 
     return response.getResults();
   }
