@@ -153,7 +153,7 @@ public interface SqlConformance {
    * MSSQL can sort by ordinal, but it really shouldn't.
    * Introducing this crutch until we can properly fix Calcite's support for it.
    *
-   * https://issues.apache.org/jira/browse/CALCITE-5866
+   * <p> https://issues.apache.org/jira/browse/CALCITE-5866
    */
   default boolean shouldSortByOrdinal() {
     return isSortByOrdinal();

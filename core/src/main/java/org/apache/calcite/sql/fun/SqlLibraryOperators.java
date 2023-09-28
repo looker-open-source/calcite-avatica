@@ -1757,8 +1757,8 @@ public abstract class SqlLibraryOperators {
   /** The "DATE_TRUNC(date, timeUnit)" function (BigQuery);
    * truncates a DATE value to the beginning of a timeUnit.
    *
-   * TODO(CALCITE-5290): Add `DATE_TRUNC` function consistent with Postgres. Currently, Postgres
-   *                     style calls can be parsed but fail validation. */
+   * <p> TODO(CALCITE-5290): Add `DATE_TRUNC` function consistent with Postgres. Currently, Postgres
+   *  style calls can be parsed but fail validation. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction DATE_TRUNC =
       SqlBasicFunction.create("DATE_TRUNC",

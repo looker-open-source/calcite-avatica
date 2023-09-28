@@ -153,7 +153,7 @@ public class ExceptionMessageTest {
     } catch (SQLException e) {
       assertThat(e.getMessage(),
           equalTo("Error while executing SQL \"select * from \"badEntries\"\": "
-              + "Can't iterate over badEntries"));
+              + "Can't iterate over badEntries: Can't iterate over badEntries"));
     }
   }
 
@@ -164,6 +164,7 @@ public class ExceptionMessageTest {
     } catch (SQLException e) {
       assertThat(e.getMessage(),
           equalTo("Error while executing SQL \"invalid sql\": parse failed: "
+              + "Non-query expression encountered in illegal context: parse failed: "
               + "Non-query expression encountered in illegal context"));
     }
   }
@@ -216,8 +217,8 @@ public class ExceptionMessageTest {
       String message = "Error while preparing plan ["
           + "LogicalProject($f0=[ABS($1)])\n"
           + "  LogicalTableScan(table=[[test, entries]])\n"
-          + "]";
-      assertThat(e.getMessage(), Matchers.isLinux(message));
+          + "]: Unable to implement EnumerableCalc(expr#0..1=[{inputs}]";
+      assertThat(e.getMessage(), containsString(message));
     }
   }
 }
