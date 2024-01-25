@@ -16,7 +16,10 @@
  */
 package org.apache.calcite.avatica.remote.looker;
 
+import java.sql.DatabaseMetaData;
+
 import org.apache.calcite.avatica.ColumnMetaData;
+import org.apache.calcite.avatica.ColumnMetaData.ArrayType;
 import org.apache.calcite.avatica.ColumnMetaData.AvaticaType;
 import org.apache.calcite.avatica.ColumnMetaData.Rep;
 import org.apache.calcite.avatica.util.ByteString;
@@ -36,6 +39,7 @@ import java.nio.charset.Charset;
 import java.sql.Array;
 import java.sql.Date;
 import java.sql.Time;
+import java.sql.Types;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -82,7 +86,6 @@ public class LookerResponseParserTest {
     buildingMap.put(Rep.OBJECT, 1000);
     supportedRepValues = new HashMap(buildingMap);
     buildingMap.clear();
-
     // Unsupported datetime types
     buildingMap.put(Rep.JAVA_SQL_TIME, new Time(1000000));
     buildingMap.put(Rep.JAVA_SQL_DATE, new Date(1000000));
@@ -126,6 +129,31 @@ public class LookerResponseParserTest {
     return ColumnMetaData.dummy(type, false);
   }
 
+  private ColumnMetaData makeArrayMetadata(ColumnMetaData.Rep scalarType) throws IOException {
+    int sqlType;
+    switch (scalarType) {
+    case PRIMITIVE_INT:
+    case INTEGER:
+      sqlType = Types.INTEGER;
+      break;
+    case STRING:
+      sqlType = Types.VARCHAR;
+      break;
+    case PRIMITIVE_DOUBLE:
+    case DOUBLE:
+    case NUMBER:
+      sqlType = Types.DOUBLE;
+      break;
+    default:
+      throw new IOException("Not implemented yet " + scalarType);
+    }
+
+    ArrayType thing = ColumnMetaData.array(
+        ColumnMetaData.scalar(sqlType, scalarType.toString(), scalarType),
+        "ARRAY", scalarType);
+    return ColumnMetaData.dummy(thing, false);
+  }
+
   @Test
   public void deserializeValueTestingIsExhaustive() {
     HashMap allMap = new HashMap();
@@ -133,6 +161,53 @@ public class LookerResponseParserTest {
     allMap.putAll(unsupportedRepValues);
 
     Arrays.stream(Rep.values()).forEach(val -> assertNotNull(allMap.get(val)));
+  }
+
+  @Test
+  public void deserializeArrayOfString() {
+    String[] testValues = { "This", "is", "a", "test" };
+    try {
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.STRING);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(testValues, is(equalTo(deserializedVal)));
+
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize ints");
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test
+  public void deserializeArrayOfInts() {
+    int[] testValues = { 1, 2, 3 };
+    try {
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.INTEGER);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(testValues, is(equalTo(deserializedVal)));
+
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize ints");
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test
+  public void deserializeArrayOfStringInts() {
+    String[] testValues = { "1", "2", "3" };
+    int[] expectedOutputValues = { 1, 2, 3 };
+
+    try {
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.INTEGER);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(expectedOutputValues, is(equalTo(deserializedVal)));
+
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize ints");
+      throw new RuntimeException(e);
+    }
   }
 
   @Test

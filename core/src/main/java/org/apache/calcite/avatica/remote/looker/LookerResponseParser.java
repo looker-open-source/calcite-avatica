@@ -16,6 +16,10 @@
  */
 package org.apache.calcite.avatica.remote.looker;
 
+import com.fasterxml.jackson.core.JsonToken;
+
+import com.fasterxml.jackson.core.io.NumberInput;
+
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.ColumnMetaData.Rep;
 import org.apache.calcite.avatica.Meta.Frame;
@@ -71,7 +75,7 @@ public class LookerResponseParser {
     switch (columnMetaData.type.rep) {
     case PRIMITIVE_BOOLEAN:
     case BOOLEAN:
-      return parser.getBooleanValue();
+      return parser.getValueAsBoolean();
     case PRIMITIVE_BYTE:
     case BYTE:
       return parser.getByteValue();
@@ -82,21 +86,25 @@ public class LookerResponseParser {
       return parser.getShortValue();
     case PRIMITIVE_INT:
     case INTEGER:
-      return parser.getIntValue();
+      return parser.getValueAsInt();
     case PRIMITIVE_LONG:
     case LONG:
-      return parser.getLongValue();
+      return parser.getValueAsLong();
     case PRIMITIVE_FLOAT:
     case FLOAT:
       return parser.getFloatValue();
     case PRIMITIVE_DOUBLE:
     case DOUBLE:
-      return parser.getDoubleValue();
+      return parser.getValueAsDouble();
     case NUMBER:
       // NUMBER is represented as BigDecimal
-      return parser.getDecimalValue();
-    // TODO: MEASURE types are appearing as Objects. This should have been solved by CALCITE-5549.
-    //  Be sure that the signature of a prepared query matches the metadata we see from JDBC.
+      if (parser.currentToken() == JsonToken.VALUE_STRING) {
+        return NumberInput.parseBigDecimal(parser.getValueAsString());
+      } else {
+        return parser.getDecimalValue();
+      }
+      // TODO: MEASURE types are appearing as Objects. This should have been solved by CALCITE-5549.
+      //  Be sure that the signature of a prepared query matches the metadata we see from JDBC.
     case OBJECT:
       switch (columnMetaData.type.id) {
       case Types.INTEGER:
@@ -112,6 +120,25 @@ public class LookerResponseParser {
     default:
       throw new IOException("Unable to parse " + columnMetaData.type.rep + " from stream!");
     }
+  }
+
+  /**
+   * Collects the values of an array whose elements are represented by {@code metaData.type.rep}. Does
+   * not support nested arrays.
+   *
+   * @param metaData the {@link ColumnMetaData} for this value.
+   * @param parser a JsonParser whose current token is JsonToken.START_ARRAY. The parser is advanced
+   *        through the elements until the end of the array is reached. Parse does not advance past
+   *        END_ARRAY.
+   * @return An array of values with element type matching {@code metaData.type.rep}.
+   */
+  static Object deserializeArray(JsonParser parser, ColumnMetaData metaData) throws IOException {
+    assert parser.currentToken() == JsonToken.START_ARRAY : "Invalid parsing state, expecting start of array!";
+    ArrayList result = new ArrayList();
+    while (parser.nextToken() != JsonToken.END_ARRAY) {
+      result.add(deserializeValue(parser, metaData));
+    }
+    return result.toArray();
   }
 
   private void seekToRows(JsonParser parser) throws IOException {
@@ -176,8 +203,13 @@ public class LookerResponseParser {
               return;
             }
 
-            // add the value to the column list
-            columnValues.add(deserializeValue(parser, signature.columns.get(i)));
+            ColumnMetaData metaData = signature.columns.get(i);
+            if (parser.currentToken() == JsonToken.START_ARRAY) {
+              columnValues.add(deserializeArray(parser, metaData));
+            } else {
+              // add the value to the column list
+              columnValues.add(deserializeValue(parser, metaData));
+            }
           }
 
           // Meta.CursorFactory#deduce will select an OBJECT cursor if there is only a single
