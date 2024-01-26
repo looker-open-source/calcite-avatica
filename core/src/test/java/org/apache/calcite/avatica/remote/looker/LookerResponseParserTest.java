@@ -16,8 +16,6 @@
  */
 package org.apache.calcite.avatica.remote.looker;
 
-import java.sql.DatabaseMetaData;
-
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.ColumnMetaData.ArrayType;
 import org.apache.calcite.avatica.ColumnMetaData.AvaticaType;
@@ -39,8 +37,8 @@ import java.nio.charset.Charset;
 import java.sql.Array;
 import java.sql.Date;
 import java.sql.Time;
-import java.sql.Types;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;

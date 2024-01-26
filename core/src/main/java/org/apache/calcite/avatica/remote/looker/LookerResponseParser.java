@@ -16,10 +16,6 @@
  */
 package org.apache.calcite.avatica.remote.looker;
 
-import com.fasterxml.jackson.core.JsonToken;
-
-import com.fasterxml.jackson.core.io.NumberInput;
-
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.ColumnMetaData.Rep;
 import org.apache.calcite.avatica.Meta.Frame;
@@ -27,6 +23,8 @@ import org.apache.calcite.avatica.Meta.Signature;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.io.NumberInput;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -123,8 +121,8 @@ public class LookerResponseParser {
   }
 
   /**
-   * Collects the values of an array whose elements are represented by {@code metaData.type.rep}. Does
-   * not support nested arrays.
+   * Collects the values of an array whose elements are represented by {@code metaData.type.rep}.
+   * Does not support nested arrays.
    *
    * @param metaData the {@link ColumnMetaData} for this value.
    * @param parser a JsonParser whose current token is JsonToken.START_ARRAY. The parser is advanced
@@ -133,7 +131,8 @@ public class LookerResponseParser {
    * @return An array of values with element type matching {@code metaData.type.rep}.
    */
   static Object[] deserializeArray(JsonParser parser, ColumnMetaData metaData) throws IOException {
-    assert parser.currentToken() == JsonToken.START_ARRAY : "Invalid parsing state, expecting start of array!";
+    assert parser.currentToken() == JsonToken.START_ARRAY
+        : "Invalid parsing state, expecting start of array!";
     ArrayList result = new ArrayList();
     while (parser.nextToken() != JsonToken.END_ARRAY) {
       result.add(deserializeValue(parser, metaData));

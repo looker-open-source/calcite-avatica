@@ -16,13 +16,12 @@
  */
 package org.apache.calcite.avatica.remote.looker;
 
-import java.math.BigDecimal;
-
 import org.apache.calcite.avatica.AvaticaConnection;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -185,7 +184,8 @@ public class LookerDriverTest {
   public void listMeasureResultsCanBeParsedIntoResultSet() throws SQLException {
     // Set up the driver with some pre-recorded responses from Looker. These are large JSON strings
     // so have been placed in the LookerTestCommon class to make this test easier to read.
-    Driver driver = new StubbedLookerDriver().withStubbedResponse(LookerTestCommon.stubbedListMeasuresSignature,
+    Driver driver = new StubbedLookerDriver().withStubbedResponse(
+        LookerTestCommon.stubbedListMeasuresSignature,
         LookerTestCommon.stubbedListMeasureResponse);
     Connection connection = driver.connect(LookerTestCommon.getUrl(),
         LookerTestCommon.getBaseProps());
@@ -220,7 +220,8 @@ public class LookerDriverTest {
   public void canProcessAllArrayTypes() throws SQLException {
     // Set up the driver with some pre-recorded responses from Looker. These are large JSON strings
     // so have been placed in the LookerTestCommon class to make this test easier to read.
-    Driver driver = new StubbedLookerDriver().withStubbedResponse(LookerTestCommon.stubbedArrayPrimitivesSig,
+    Driver driver = new StubbedLookerDriver().withStubbedResponse(
+        LookerTestCommon.stubbedArrayPrimitivesSig,
         LookerTestCommon.stubbedArrayPrimitivesResponse);
     Connection connection = driver.connect(LookerTestCommon.getUrl(),
         LookerTestCommon.getBaseProps());
@@ -234,34 +235,35 @@ public class LookerDriverTest {
       Assert.assertThat(rsMetaData.getColumnType(i), is(Types.ARRAY));
     }
 
-     while (test.next()) {
-       Object outputArray = test.getArray(2).getArray();
-       int[] expectedInts = new int[]{1,2,3};
-       Assert.assertThat(expectedInts, is(equalTo(outputArray)));
+    while (test.next()) {
+      Object outputArray = test.getArray(2).getArray();
 
-       outputArray = test.getArray(3).getArray();
-       BigDecimal[] expectedDecimals = new BigDecimal[]{
-           BigDecimal.valueOf(1.1), BigDecimal.valueOf(2.2), BigDecimal.valueOf(3.3)
-       };
-       Assert.assertThat(
-           expectedDecimals,
-           is(equalTo(outputArray))
-       );
+      int[] expectedInts = new int[]{1, 2, 3};
+      Assert.assertThat(expectedInts, is(equalTo(outputArray)));
 
-       String[] expectedStrs = new String[]{"this", "and", "that"};
-       outputArray = test.getArray(4).getArray();
-       Assert.assertThat(
-           expectedStrs,
-           is(equalTo(outputArray))
-       );
+      outputArray = test.getArray(3).getArray();
+      BigDecimal[] expectedDecimals = new BigDecimal[]{
+          BigDecimal.valueOf(1.1), BigDecimal.valueOf(2.2), BigDecimal.valueOf(3.3)
+      };
+      Assert.assertThat(
+          expectedDecimals,
+          is(equalTo(outputArray))
+      );
 
-       boolean[] expectedBools = new boolean[]{true, false, false};
-       outputArray = test.getArray(5).getArray();
-       Assert.assertThat(
-           expectedBools,
-           is(equalTo(outputArray))
-       );
-     }
+      String[] expectedStrs = new String[]{"this", "and", "that"};
+      outputArray = test.getArray(4).getArray();
+      Assert.assertThat(
+          expectedStrs,
+          is(equalTo(outputArray))
+      );
+
+      boolean[] expectedBools = new boolean[]{true, false, false};
+      outputArray = test.getArray(5).getArray();
+      Assert.assertThat(
+          expectedBools,
+          is(equalTo(outputArray))
+      );
+    }
   }
 
 
