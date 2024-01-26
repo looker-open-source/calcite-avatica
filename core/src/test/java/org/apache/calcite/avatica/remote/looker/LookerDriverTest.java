@@ -229,30 +229,36 @@ public class LookerDriverTest {
     ResultSetMetaData rsMetaData = test.getMetaData();
     int columnCount = rsMetaData.getColumnCount();
 
-    // Verify we got our arrays
+    // Verify we got our arrays, skipping index 1 becuase it isn't an array
     for (int i = 2; i <= columnCount; i++) {
       Assert.assertThat(rsMetaData.getColumnType(i), is(Types.ARRAY));
     }
 
      while (test.next()) {
        Object outputArray = test.getArray(2).getArray();
-       Assert.assertThat(new int[]{1,2,3}, is(equalTo(outputArray)));
+       int[] expectedInts = new int[]{1,2,3};
+       Assert.assertThat(expectedInts, is(equalTo(outputArray)));
 
        outputArray = test.getArray(3).getArray();
+       BigDecimal[] expectedDecimals = new BigDecimal[]{
+           BigDecimal.valueOf(1.1), BigDecimal.valueOf(2.2), BigDecimal.valueOf(3.3)
+       };
        Assert.assertThat(
-           new BigDecimal[]{BigDecimal.valueOf(1.1), BigDecimal.valueOf(2.2), BigDecimal.valueOf(3.3)},
+           expectedDecimals,
            is(equalTo(outputArray))
        );
 
+       String[] expectedStrs = new String[]{"this", "and", "that"};
        outputArray = test.getArray(4).getArray();
        Assert.assertThat(
-           new String[]{"this", "and", "that"},
+           expectedStrs,
            is(equalTo(outputArray))
        );
 
+       boolean[] expectedBools = new boolean[]{true, false, false};
        outputArray = test.getArray(5).getArray();
        Assert.assertThat(
-           new boolean[]{true, false, false},
+           expectedBools,
            is(equalTo(outputArray))
        );
      }

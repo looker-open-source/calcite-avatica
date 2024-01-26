@@ -203,7 +203,6 @@ public class LookerResponseParserTest {
       ColumnMetaData meta = makeArrayMetadata(Rep.INTEGER);
       Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
       assertThat(expectedOutputValues, is(equalTo(deserializedVal)));
-
     } catch (IOException e) {
       System.out.println("Unable to deserialize ints");
       throw new RuntimeException(e);

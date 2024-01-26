@@ -103,8 +103,8 @@ public class LookerResponseParser {
       } else {
         return parser.getDecimalValue();
       }
-      // TODO: MEASURE types are appearing as Objects. This should have been solved by CALCITE-5549.
-      //  Be sure that the signature of a prepared query matches the metadata we see from JDBC.
+    // TODO: MEASURE types are appearing as Objects. This should have been solved by CALCITE-5549.
+    //  Be sure that the signature of a prepared query matches the metadata we see from JDBC.
     case OBJECT:
       switch (columnMetaData.type.id) {
       case Types.INTEGER:
@@ -132,7 +132,7 @@ public class LookerResponseParser {
    *        END_ARRAY.
    * @return An array of values with element type matching {@code metaData.type.rep}.
    */
-  static Object deserializeArray(JsonParser parser, ColumnMetaData metaData) throws IOException {
+  static Object[] deserializeArray(JsonParser parser, ColumnMetaData metaData) throws IOException {
     assert parser.currentToken() == JsonToken.START_ARRAY : "Invalid parsing state, expecting start of array!";
     ArrayList result = new ArrayList();
     while (parser.nextToken() != JsonToken.END_ARRAY) {
