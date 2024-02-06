@@ -654,6 +654,6 @@ public class LookerTestCommon {
       + "    users AS users\\nORDER BY\\n    1\\nLIMIT 1\"},"
       + "\"rows\":[{\"test_name\":{\"value\":\"testing arrays\"},\"int_arrs\":{\"value\":[\"1\","
       + "\"2\",\"3\"]},\"float_arr\":{\"value\":[\"1.1\",\"2.2\",\"3.3\"]},"
-      + "\"varchar_arr\":{\"value\":[\"this\",\"and\",\"that\"]},"
+      + "\"varchar_arr\":{\"value\":[\"this\",\"and\",null,\"that\"]},"
       + "\"boolean_arr\":{\"value\":[\"true\",\"false\",\"false\"]}}]}";
 }

@@ -132,12 +132,33 @@ public class LookerResponseParser {
    */
   static Object[] deserializeArray(JsonParser parser, ColumnMetaData metaData) throws IOException {
     assert parser.currentToken() == JsonToken.START_ARRAY
-        : "Invalid parsing state, expecting start of array!";
+        : "Invalid parsing state. Expecting start of array.";
+
+    boolean isPrimitive = isPrimitive(metaData);
     ArrayList result = new ArrayList();
     while (parser.nextToken() != JsonToken.END_ARRAY) {
-      result.add(deserializeValue(parser, metaData));
+      Object deserialized = deserializeValue(parser, metaData);
+      if (isPrimitive && (deserialized == null)) {
+        throw new IOException("Primitive array cannot contain null values");
+      }
+      result.add(deserialized);
     }
     return result.toArray();
+  }
+
+  static boolean isPrimitive(ColumnMetaData metaData) {
+    switch (metaData.type.rep) {
+    case PRIMITIVE_BOOLEAN:
+    case PRIMITIVE_BYTE:
+    case PRIMITIVE_CHAR:
+    case PRIMITIVE_SHORT:
+    case PRIMITIVE_INT:
+    case PRIMITIVE_LONG:
+    case PRIMITIVE_FLOAT:
+    case PRIMITIVE_DOUBLE:
+      return true;
+    }
+    return false;
   }
 
   private void seekToRows(JsonParser parser) throws IOException {

@@ -134,6 +134,10 @@ public class LookerResponseParserTest {
     case INTEGER:
       sqlType = Types.INTEGER;
       break;
+    case BYTE:
+    case PRIMITIVE_BYTE:
+      sqlType = Types.SMALLINT;
+      break;
     case STRING:
       sqlType = Types.VARCHAR;
       break;
@@ -141,6 +145,18 @@ public class LookerResponseParserTest {
     case DOUBLE:
     case NUMBER:
       sqlType = Types.DOUBLE;
+      break;
+    case FLOAT:
+    case PRIMITIVE_FLOAT:
+      sqlType = Types.FLOAT;
+      break;
+    case BOOLEAN:
+    case PRIMITIVE_BOOLEAN:
+      sqlType = Types.BOOLEAN;
+      break;
+    case PRIMITIVE_LONG:
+    case LONG:
+      sqlType = Types.BIGINT;
       break;
     default:
       throw new IOException("Not implemented yet " + scalarType);
@@ -168,8 +184,7 @@ public class LookerResponseParserTest {
       JsonParser parser = makeTestParserFromValue(testValues);
       ColumnMetaData meta = makeArrayMetadata(Rep.STRING);
       Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
-      assertThat(testValues, is(equalTo(deserializedVal)));
-
+      assertThat(deserializedVal, is(equalTo(testValues)));
     } catch (IOException e) {
       System.out.println("Unable to deserialize ints");
       throw new RuntimeException(e);
@@ -177,35 +192,230 @@ public class LookerResponseParserTest {
   }
 
   @Test
-  public void deserializeArrayOfInts() {
-    int[] testValues = { 1, 2, 3 };
+  public void deserializeArrayOfIntegers() {
+    Integer[] testValues = { 1, 2, 3 };
     try {
       JsonParser parser = makeTestParserFromValue(testValues);
       ColumnMetaData meta = makeArrayMetadata(Rep.INTEGER);
       Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
-      assertThat(testValues, is(equalTo(deserializedVal)));
-
+      assertThat(deserializedVal, is(equalTo(testValues)));
     } catch (IOException e) {
       System.out.println("Unable to deserialize ints");
       throw new RuntimeException(e);
     }
+  }
+
+  @Test
+  public void deserializeArrayOfIntegerWithNulls() {
+    Integer[] testValues = { 1, null, 2, 3 };
+    try {
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.INTEGER);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(deserializedVal, is(equalTo(testValues)));
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize ints");
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test
+  public void deserializeArrayOfPrimitiveInts() {
+    int[] testValues = { 1, 2, 3 };
+    try {
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.PRIMITIVE_INT);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(deserializedVal, is(equalTo(testValues)));
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize ints");
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test(expected = IOException.class)
+  public void deserializeArrayOfPrimitiveIntsWithNullsThrowsError() throws IOException {
+    // Yes using an array of Integer here instead of "int" to emulate
+    // scenario where null came in off the wire but metadatatype was primitive int
+    Integer[] testValues = { 1, 2, null, 3 };
+    JsonParser parser = makeTestParserFromValue(testValues);
+    ColumnMetaData meta = makeArrayMetadata(Rep.PRIMITIVE_INT);
+    LookerResponseParser.deserializeArray(parser, meta);
   }
 
   @Test
   public void deserializeArrayOfStringInts() {
     String[] testValues = { "1", "2", "3" };
     int[] expectedOutputValues = { 1, 2, 3 };
-
     try {
       JsonParser parser = makeTestParserFromValue(testValues);
       ColumnMetaData meta = makeArrayMetadata(Rep.INTEGER);
       Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
-      assertThat(expectedOutputValues, is(equalTo(deserializedVal)));
+      assertThat(deserializedVal, is(equalTo(expectedOutputValues)));
     } catch (IOException e) {
       System.out.println("Unable to deserialize ints");
       throw new RuntimeException(e);
     }
   }
+
+  @Test
+  public void deserializeArrayOfIntsWithNulls() {
+    String[] testValues = { "1", null, "2", null, "3" };
+    Integer[] expectedOutputValues = { 1, null, 2, null, 3 };
+    try {
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.INTEGER);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(deserializedVal, is(equalTo(expectedOutputValues)));
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize integers");
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test
+  public void deserializeArrayOfBooleanPrimitives() {
+    boolean[] testValues = { true, false, false, true };
+    try {
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.PRIMITIVE_BOOLEAN);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(deserializedVal, is(equalTo(testValues)));
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize boolean primitives");
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test
+  public void deserializeArrayOfBooleanStrings() {
+    Boolean[] testValues = { Boolean.TRUE, Boolean.TRUE, null, Boolean.FALSE };
+    try {
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.BOOLEAN);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(deserializedVal, is(equalTo(testValues)));
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize boolean primitives");
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test (expected = AssertionError.class)
+  public void deserializeArrayOfByte() {
+    byte[] testValues = { 2, 4, 6 };
+    try {
+      //TODO: b/324088915 - We should look more closely with respect to how we encode on looker side
+      // and for now safer to throw the error.
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.PRIMITIVE_BYTE);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(deserializedVal, is(equalTo(testValues)));
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize boolean primitives");
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test
+  public void deserializeArrayOfLongPrimitives() {
+    long[] testValues = { 123L, 345L };
+    try {
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.PRIMITIVE_LONG);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(deserializedVal, is(equalTo(testValues)));
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize boolean primitives");
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test
+  public void deserializeArrayOfLongs() {
+    Long[] testValues = { null, 1L, 1L, 2L, 5L, 14L, 42L, 132L };
+    try {
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.LONG);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(deserializedVal, is(equalTo(testValues)));
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize boolean primitives");
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test
+  public void deserializeArrayOfLongAsString() {
+    Object[] testValues = { "123", null, "345"};
+    Long[] expectedValues = { 123L, null, 345L };
+    try {
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.LONG);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(deserializedVal, is(equalTo(expectedValues)));
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize boolean primitives");
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test
+  public void deserializeArrayOfFloatPrimitive() {
+    float[] testValues = { 1.2f, 2.2f, 3.1415f };
+    try {
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.PRIMITIVE_FLOAT);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(deserializedVal, is(equalTo(testValues)));
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize boolean primitives");
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test
+  public void deserializeArrayOfFloat() {
+    Float[] testValues = { 1.2f, 2.2f, 3.1415f };
+    try {
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.FLOAT);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(deserializedVal, is(equalTo(testValues)));
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize boolean primitives");
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test
+  public void deserializeArrayOfDoublePrimitive() {
+    double[] testValues = { 1.2, 2.2, 3.1415 };
+    try {
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.PRIMITIVE_DOUBLE);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(deserializedVal, is(equalTo(testValues)));
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize boolean primitives");
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test
+  public void deserializeArrayOfDouble() {
+    Double[] testValues = { 1.2, 2.2, 3.1415 };
+    try {
+      JsonParser parser = makeTestParserFromValue(testValues);
+      ColumnMetaData meta = makeArrayMetadata(Rep.PRIMITIVE_DOUBLE);
+      Object deserializedVal = LookerResponseParser.deserializeArray(parser, meta);
+      assertThat(deserializedVal, is(equalTo(testValues)));
+    } catch (IOException e) {
+      System.out.println("Unable to deserialize boolean primitives");
+      throw new RuntimeException(e);
+    }
+  }
+
 
   @Test
   public void deserializeValueThrowsErrorOnUnsupportedType() {

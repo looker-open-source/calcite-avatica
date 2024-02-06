@@ -236,32 +236,32 @@ public class LookerDriverTest {
     }
 
     while (test.next()) {
-      Object outputArray = test.getArray(2).getArray();
+      Object actualArrayValue = test.getArray(2).getArray();
 
       int[] expectedInts = new int[]{1, 2, 3};
-      Assert.assertThat(expectedInts, is(equalTo(outputArray)));
+      Assert.assertThat(actualArrayValue, is(equalTo(expectedInts)));
 
-      outputArray = test.getArray(3).getArray();
+      actualArrayValue = test.getArray(3).getArray();
       BigDecimal[] expectedDecimals = new BigDecimal[]{
           BigDecimal.valueOf(1.1), BigDecimal.valueOf(2.2), BigDecimal.valueOf(3.3)
       };
       Assert.assertThat(
-          expectedDecimals,
-          is(equalTo(outputArray))
+          actualArrayValue,
+          is(equalTo(expectedDecimals))
       );
 
-      String[] expectedStrs = new String[]{"this", "and", "that"};
-      outputArray = test.getArray(4).getArray();
+      String[] expectedStrs = new String[]{"this", "and", null, "that"};
+      actualArrayValue = test.getArray(4).getArray();
       Assert.assertThat(
-          expectedStrs,
-          is(equalTo(outputArray))
+          actualArrayValue,
+          is(equalTo(expectedStrs))
       );
 
       boolean[] expectedBools = new boolean[]{true, false, false};
-      outputArray = test.getArray(5).getArray();
+      actualArrayValue = test.getArray(5).getArray();
       Assert.assertThat(
-          expectedBools,
-          is(equalTo(outputArray))
+          actualArrayValue,
+          is(equalTo(expectedBools))
       );
     }
   }
