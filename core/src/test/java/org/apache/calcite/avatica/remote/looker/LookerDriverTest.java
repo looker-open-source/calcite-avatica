@@ -18,9 +18,9 @@ package org.apache.calcite.avatica.remote.looker;
 
 import org.apache.calcite.avatica.AvaticaConnection;
 
-import org.junit.Assert;
 import org.junit.Test;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -33,6 +33,7 @@ import java.sql.Types;
 import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -46,6 +47,21 @@ public class LookerDriverTest {
       "SELECT " + "`users.created_date`, `users.created_year`, `users.created_time`, `users.name`\n"
           + "`users.age`, `users.is45or30`, SUM(`users.age`), AGGREGATE(`users.average_age`)\n"
           + "FROM example.users\n" + "GROUP BY 1, 2, 3, 4, 5, 6";
+
+  static final String TEST_LIST_MEASURE_SQL = "SELECT `users.created_year`\n"
+      + "        , AGGREGATE(`users.names`) as `names`\n"
+      + "        , AGGREGATE(`users.ages`) as `ages`\n"
+      + "       FROM `example`.`users`\n"
+      + "       GROUP BY `users.created_year`\n"
+      + "       LIMIT 2";
+
+  static final String TEST_ARRAY_PRIMITIVES_SQL = "SELECT \"testing arrays\" as `test_name`\n"
+      + "        , array[1,2,3] as `int_arrs`\n"
+      + "        , array[1.1, 2.2, 3.3] as `float_arr`\n"
+      + "        , array[\"this\", \"and\", \"that\"] as `varchar_arr`\n"
+      + "        , array[true, false, false] as `boolean_arr`\n"
+      + "       FROM `example`.`users`\n"
+      + "       LIMIT 1";
 
   @Test
   public void driverIsRegistered() throws SQLException {
@@ -94,11 +110,14 @@ public class LookerDriverTest {
       fail("Should have thrown an exception during stream parsing!");
     } catch (SQLException e) {
 
-      Assert.assertThat(e.getMessage(),
+      // assertThat(e.getMessage(),
+      //     containsString("Error while executing SQL \"" + TEST_SQL + "\""));
+      assertThat(e.getMessage(),
           containsString("Error while executing SQL \"" + TEST_SQL + "\""));
 
       assertNotNull(e.getCause());
-      Assert.assertThat(e.getCause().getMessage(), containsString("Unexpected end-of-input"));
+      // assertThat(e.getCause().getMessage(), containsString("Unexpected end-of-input"));
+      assertThat(e.getCause().getMessage(), containsString("Unexpected end-of-input"));
     }
   }
 
@@ -115,40 +134,40 @@ public class LookerDriverTest {
     ResultSetMetaData rsMetaData = test.getMetaData();
 
     // verify column types
-    Assert.assertThat(rsMetaData.getColumnCount(), is(8));
+    assertThat(rsMetaData.getColumnCount(), is(8));
 
     // DATE
-    Assert.assertThat(rsMetaData.getColumnType(1), is(Types.DATE));
-    Assert.assertThat(rsMetaData.getColumnName(1), is("users.created_date"));
+    assertThat(rsMetaData.getColumnType(1), is(Types.DATE));
+    assertThat(rsMetaData.getColumnName(1), is("users.created_date"));
 
     // YEAR
-    Assert.assertThat(rsMetaData.getColumnType(2), is(Types.INTEGER));
-    Assert.assertThat(rsMetaData.getColumnName(2), is("users.created_year"));
+    assertThat(rsMetaData.getColumnType(2), is(Types.INTEGER));
+    assertThat(rsMetaData.getColumnName(2), is("users.created_year"));
 
     // TIMESTAMP
-    Assert.assertThat(rsMetaData.getColumnType(3), is(Types.TIMESTAMP));
-    Assert.assertThat(rsMetaData.getColumnName(3), is("users.created_time"));
+    assertThat(rsMetaData.getColumnType(3), is(Types.TIMESTAMP));
+    assertThat(rsMetaData.getColumnName(3), is("users.created_time"));
 
     // STRING
-    Assert.assertThat(rsMetaData.getColumnType(4), is(Types.VARCHAR));
-    Assert.assertThat(rsMetaData.getColumnName(4), is("users.name"));
+    assertThat(rsMetaData.getColumnType(4), is(Types.VARCHAR));
+    assertThat(rsMetaData.getColumnName(4), is("users.name"));
 
     // DOUBLE dimension
-    Assert.assertThat(rsMetaData.getColumnType(5), is(Types.DOUBLE));
-    Assert.assertThat(rsMetaData.getColumnName(5), is("users.age"));
+    assertThat(rsMetaData.getColumnType(5), is(Types.DOUBLE));
+    assertThat(rsMetaData.getColumnName(5), is("users.age"));
 
     // BOOLEAN
-    Assert.assertThat(rsMetaData.getColumnType(6), is(Types.BOOLEAN));
-    Assert.assertThat(rsMetaData.getColumnName(6), is("users.is45or30"));
+    assertThat(rsMetaData.getColumnType(6), is(Types.BOOLEAN));
+    assertThat(rsMetaData.getColumnName(6), is("users.is45or30"));
 
     // DOUBLE custom measure
-    Assert.assertThat(rsMetaData.getColumnType(7), is(Types.DOUBLE));
-    Assert.assertThat(rsMetaData.getColumnName(7), is("EXPR$6"));
+    assertThat(rsMetaData.getColumnType(7), is(Types.DOUBLE));
+    assertThat(rsMetaData.getColumnName(7), is("EXPR$6"));
 
     // DOUBLE LookML measure
-    Assert.assertThat(rsMetaData.getColumnType(8), is(Types.DOUBLE));
+    assertThat(rsMetaData.getColumnType(8), is(Types.DOUBLE));
     // TODO: investigate why measures are not being aliased as their LookML field name
-    Assert.assertThat(rsMetaData.getColumnName(8), is("EXPR$7"));
+    assertThat(rsMetaData.getColumnName(8), is("EXPR$7"));
 
     // verify every row can be fetched with the appropriate getter method
     while (test.next()) {
@@ -164,6 +183,93 @@ public class LookerDriverTest {
   }
 
   @Test
+  public void listMeasureResultsCanBeParsedIntoResultSet() throws SQLException {
+    // Set up the driver with some pre-recorded responses from Looker. These are large JSON strings
+    // so have been placed in the LookerTestCommon class to make this test easier to read.
+    Driver driver = new StubbedLookerDriver().withStubbedResponse(
+        LookerTestCommon.stubbedListMeasuresSignature,
+        LookerTestCommon.stubbedListMeasureResponse);
+    Connection connection = driver.connect(LookerTestCommon.getUrl(),
+        LookerTestCommon.getBaseProps());
+
+    ResultSet test = connection.createStatement().executeQuery(TEST_LIST_MEASURE_SQL);
+    ResultSetMetaData rsMetaData = test.getMetaData();
+
+    // verify column types
+    assertThat(rsMetaData.getColumnCount(), is(3));
+
+    // YEAR
+    assertThat(rsMetaData.getColumnType(1), is(Types.INTEGER));
+    assertThat(rsMetaData.getColumnName(1), is("users.created_year"));
+
+    // Names
+    assertThat(rsMetaData.getColumnType(2), is(Types.ARRAY));
+    assertThat(rsMetaData.getColumnName(2), is("names"));
+
+    // Ages
+    assertThat(rsMetaData.getColumnType(3), is(Types.ARRAY));
+    assertThat(rsMetaData.getColumnName(3), is("ages"));
+
+    // verify every row can be fetched with the appropriate getter method
+    while (test.next()) {
+      assertNotNull(test.getInt(1));
+      assertNotNull(test.getArray(2));
+      assertNotNull(test.getArray(3));
+    }
+  }
+
+  @Test
+  public void canProcessAllArrayTypes() throws SQLException {
+    // Set up the driver with some pre-recorded responses from Looker. These are large JSON strings
+    // so have been placed in the LookerTestCommon class to make this test easier to read.
+    Driver driver = new StubbedLookerDriver().withStubbedResponse(
+        LookerTestCommon.stubbedArrayPrimitivesSig,
+        LookerTestCommon.stubbedArrayPrimitivesResponse);
+    Connection connection = driver.connect(LookerTestCommon.getUrl(),
+        LookerTestCommon.getBaseProps());
+
+    ResultSet test = connection.createStatement().executeQuery(TEST_ARRAY_PRIMITIVES_SQL);
+    ResultSetMetaData rsMetaData = test.getMetaData();
+    int columnCount = rsMetaData.getColumnCount();
+
+    // Verify we got our arrays, skipping index 1 becuase it isn't an array
+    for (int i = 2; i <= columnCount; i++) {
+      assertThat(rsMetaData.getColumnType(i), is(Types.ARRAY));
+    }
+
+    while (test.next()) {
+      Object actualArrayValue = test.getArray(2).getArray();
+
+      int[] expectedInts = new int[]{1, 2, 3};
+      assertThat(actualArrayValue, is(equalTo(expectedInts)));
+
+      actualArrayValue = test.getArray(3).getArray();
+      BigDecimal[] expectedDecimals = new BigDecimal[]{
+          BigDecimal.valueOf(1.1), BigDecimal.valueOf(2.2), BigDecimal.valueOf(3.3)
+      };
+      assertThat(
+          actualArrayValue,
+          is(equalTo(expectedDecimals))
+      );
+
+      String[] expectedStrs = new String[]{"this", "and", null, "that"};
+      actualArrayValue = test.getArray(4).getArray();
+      assertThat(
+          actualArrayValue,
+          is(equalTo(expectedStrs))
+      );
+
+      boolean[] expectedBools = new boolean[]{true, false, false};
+      actualArrayValue = test.getArray(5).getArray();
+      assertThat(
+          actualArrayValue,
+          is(equalTo(expectedBools))
+      );
+    }
+  }
+
+
+  @Test
   public void canUsePreparedStatement() throws SQLException {
     Driver driver = new StubbedLookerDriver().withStubbedResponse(LookerTestCommon.stubbedSignature,
         LookerTestCommon.stubbedJsonResults);
@@ -175,40 +281,40 @@ public class LookerDriverTest {
     ResultSetMetaData metaData = prepareStatement.getMetaData();
 
     // verify column types are accessible prior to execution
-    Assert.assertThat(metaData.getColumnCount(), is(8));
+    assertThat(metaData.getColumnCount(), is(8));
 
     // DATE
-    Assert.assertThat(metaData.getColumnType(1), is(Types.DATE));
-    Assert.assertThat(metaData.getColumnName(1), is("users.created_date"));
+    assertThat(metaData.getColumnType(1), is(Types.DATE));
+    assertThat(metaData.getColumnName(1), is("users.created_date"));
 
     // YEAR
-    Assert.assertThat(metaData.getColumnType(2), is(Types.INTEGER));
-    Assert.assertThat(metaData.getColumnName(2), is("users.created_year"));
+    assertThat(metaData.getColumnType(2), is(Types.INTEGER));
+    assertThat(metaData.getColumnName(2), is("users.created_year"));
 
     // TIMESTAMP
-    Assert.assertThat(metaData.getColumnType(3), is(Types.TIMESTAMP));
-    Assert.assertThat(metaData.getColumnName(3), is("users.created_time"));
+    assertThat(metaData.getColumnType(3), is(Types.TIMESTAMP));
+    assertThat(metaData.getColumnName(3), is("users.created_time"));
 
     // STRING
-    Assert.assertThat(metaData.getColumnType(4), is(Types.VARCHAR));
-    Assert.assertThat(metaData.getColumnName(4), is("users.name"));
+    assertThat(metaData.getColumnType(4), is(Types.VARCHAR));
+    assertThat(metaData.getColumnName(4), is("users.name"));
 
     // DOUBLE dimension
-    Assert.assertThat(metaData.getColumnType(5), is(Types.DOUBLE));
-    Assert.assertThat(metaData.getColumnName(5), is("users.age"));
+    assertThat(metaData.getColumnType(5), is(Types.DOUBLE));
+    assertThat(metaData.getColumnName(5), is("users.age"));
 
     // BOOLEAN
-    Assert.assertThat(metaData.getColumnType(6), is(Types.BOOLEAN));
-    Assert.assertThat(metaData.getColumnName(6), is("users.is45or30"));
+    assertThat(metaData.getColumnType(6), is(Types.BOOLEAN));
+    assertThat(metaData.getColumnName(6), is("users.is45or30"));
 
     // DOUBLE custom measure
-    Assert.assertThat(metaData.getColumnType(7), is(Types.DOUBLE));
-    Assert.assertThat(metaData.getColumnName(7), is("EXPR$6"));
+    assertThat(metaData.getColumnType(7), is(Types.DOUBLE));
+    assertThat(metaData.getColumnName(7), is("EXPR$6"));
 
     // DOUBLE LookML measure
-    Assert.assertThat(metaData.getColumnType(8), is(Types.DOUBLE));
+    assertThat(metaData.getColumnType(8), is(Types.DOUBLE));
     // TODO: investigate why measures are not being aliased as their LookML field name
-    Assert.assertThat(metaData.getColumnName(8), is("EXPR$7"));
+    assertThat(metaData.getColumnName(8), is("EXPR$7"));
 
     // verify execution on a prepared statement works
     assertTrue(prepareStatement.execute());
