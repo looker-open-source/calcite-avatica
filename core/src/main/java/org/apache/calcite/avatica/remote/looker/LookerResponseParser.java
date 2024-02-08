@@ -138,7 +138,7 @@ public class LookerResponseParser {
     ArrayList result = new ArrayList();
     while (parser.nextToken() != JsonToken.END_ARRAY) {
       Object deserialized = deserializeValue(parser, metaData);
-      if (isPrimitive && (deserialized == null)) {
+      if (isPrimitive && deserialized == null) {
         throw new IOException("Primitive array cannot contain null values");
       }
       result.add(deserialized);
