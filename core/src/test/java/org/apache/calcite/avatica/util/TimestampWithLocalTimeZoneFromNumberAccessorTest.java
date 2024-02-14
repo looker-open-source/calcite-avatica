@@ -282,19 +282,7 @@ public class TimestampWithLocalTimeZoneFromNumberAccessorTest {
    * Test {@code getTimestamp()} supports date range 0001-01-01 to 9999-12-31 required by ANSI SQL.
    */
   @Test public void testTimestampWithAnsiDateRange() throws SQLException {
-    for (int i = 1; i < 1943; ++i) {
-      assertTimestamp(i,  TimeZone.getDefault().getRawOffset());
-    }
-    for (int i = 1943; i < 1946; ++i) {
-      assertTimestamp(i,  TimeZone.getDefault().getRawOffset() + DateTimeUtils.MILLIS_PER_HOUR);
-    }
-    for (int i = 1946; i < 1949; ++i) {
-      assertTimestamp(i,  TimeZone.getDefault().getRawOffset());
-    }
-    for (int i = 1949; i < 1950; ++i) {
-      assertTimestamp(i,  TimeZone.getDefault().getRawOffset() + DateTimeUtils.MILLIS_PER_HOUR);
-    }
-    for (int i = 1950; i < 10000; ++i) {
+    for (int i = 1; i < 10000; ++i) {
       assertTimestamp(i,  TimeZone.getDefault().getRawOffset());
     }
   }
