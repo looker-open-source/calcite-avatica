@@ -177,7 +177,12 @@ allprojects {
         dependencies {
             "implementation"(platform(project(":bom")))
             // Add the locally bundled LookerSDK fat jar
-            "implementation"(files("../libs/looker-kotlin-sdk-a48011f.jar"))
+            "implementation"(files("../libs/looker-kotlin-sdk-b01b08d9.jar"))
+            // We also need the Kotlin standard library
+            // so we can include the LookerSDK Kotlin JAR in this Java project
+            "implementation"("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
+            // and Google's HTTP client library, which the LookerSDK uses.
+            "implementation"("com.google.http-client:google-http-client:1.44.2")
         }
     }
     if (!skipAutostyle) {

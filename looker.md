@@ -37,6 +37,45 @@ to publish it in your `~/.m2/` local repository,
 then enable the local repo in Calcite by un-commenting the line `enableMavenLocal=true`
 in Calcite's `gradle.properties`, and pick the version of Avatica you just built.
 
+## Building the Looker SDK
+
+As of release `23.4-looker`, this project depends on the Looker SDK.
+To build a new version of that SDK:
+
+1. Spin up helltool on your cloudtop and make sure you have a user account
+   with APIv3 credentials in there. Also make sure it has the self-signed
+   certificates set up as per the helltool README.
+1. Go to Admin > API and change the "API Host URL" from
+   `http://localhost:19999` to `https://self-signed.looker.com:19999`
+   and hit Save.
+1. Clone the [SDK Codegen] repo and `cd` to the repository root.
+1. `cp looker-sample.ini looker.ini`, and edit the values in `looker.ini`
+   so it points to your local helltool server. You're going to hardcode
+   credentials to your local instance, but these are only used to generate
+   the Kotlin sources by querying your running helltool server
+   for all available API endpoints. They won't end up in the built JAR.
+   - `base_url` should be `https://self-signed.looker.com:19999`.
+   - Set `client_id` and `client_secret` according to your APIv3 credentials.
+   - Set `verify_ssl=false`.
+1. `yarn install`
+1. `yarn build`
+1. `yarn gen kotlin`
+1. `cd kotlin`
+1. `./gradlew :spotlessApply`
+1. `./gradlew build`.
+   You may get some test failures. It's likely you could ignore these,
+   although it probably warrants some investigation.
+   The SDK codegen repo isn't always well-maintained.
+   You'll end up with an SDK JAR at `build/libs/looker-kotlin-sdk.jar`.
+1. Copy the SDK JAR over to the Avatica repo.
+   Include the commit hash from the SDK repo when it was built in the filename.
+   You should have a file like `libs/looker-kotlin-sdk-a48011f.jar` in the Calcite repo.
+1. Edit `build.gradle.kts` to point to that file, like in the [initial commit]
+   adding the SDK to the driver.
+
+[SDK Codegen]: https://github.com/looker-open-source/sdk-codegen
+[initial commit]: https://github.com/looker-open-source/calcite-avatica/commit/f989f12dc10af8215c6d1089aa090e96bc061f9b#diff-b6b51c3dfe033da6e3383076d95b8f5e692e53fbc74e6bc597407fbc49d2ba07
+
 ## Release
 
 Release will have a name like `1.21.1-looker` (if the most
