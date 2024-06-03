@@ -177,7 +177,7 @@ allprojects {
         dependencies {
             "implementation"(platform(project(":bom")))
             // Add the locally bundled LookerSDK fat jar
-            "implementation"(files("../libs/looker-kotlin-sdk-b01b08d9.jar"))
+            "implementation"(files("../libs/looker-kotlin-sdk-20f9cc34.jar"))
             // We also need the Kotlin standard library
             // so we can include the LookerSDK Kotlin JAR in this Java project
             "implementation"("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
