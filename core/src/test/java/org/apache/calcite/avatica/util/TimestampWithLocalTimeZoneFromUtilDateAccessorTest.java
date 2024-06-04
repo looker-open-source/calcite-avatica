@@ -61,7 +61,7 @@ public class TimestampWithLocalTimeZoneFromUtilDateAccessorTest {
   private static final String SHIFT_OFFSET_STRING_1 = "1582-10-04 05:30:00";
   // UTC: 1582-10-05 00:00:00
   private static final long SHIFT_INSTANT_2 = SHIFT_INSTANT_1 + DateTimeUtils.MILLIS_PER_DAY;
-  private static final String SHIFT_OFFSET_STRING_2 = "1582-10-05 05:30:00";
+  private static final String SHIFT_OFFSET_STRING_2 = "1582-10-15 05:30:00";
   // UTC: 1582-10-16 00:00:00
   private static final long SHIFT_INSTANT_3 = SHIFT_INSTANT_2 + DateTimeUtils.MILLIS_PER_DAY;
   private static final String SHIFT_OFFSET_STRING_3 = "1582-10-16 05:30:00";

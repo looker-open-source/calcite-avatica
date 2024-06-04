@@ -58,6 +58,7 @@ public class TimestampFromUtilDateAccessorTest {
   private static final String SHIFT_STRING_1 = "1582-10-04 00:00:00";
   // UTC: 1582-10-05 00:00:00
   private static final long SHIFT_INSTANT_2 = SHIFT_INSTANT_1 + DateTimeUtils.MILLIS_PER_DAY;
+  private static final String SHIFT_STRING_2 = "1582-10-15 00:00:00";
   // UTC: 1582-10-16 00:00:00
   private static final long SHIFT_INSTANT_3 = SHIFT_INSTANT_2 + DateTimeUtils.MILLIS_PER_DAY;
   private static final String SHIFT_STRING_3 = "1582-10-16 00:00:00";
@@ -202,6 +203,8 @@ public class TimestampFromUtilDateAccessorTest {
   @Test public void testStringWithGregorianShift() throws SQLException {
     value = new Timestamp(SHIFT_INSTANT_1);
     assertThat(instance.getString(), is(SHIFT_STRING_1));
+    value = new Timestamp(SHIFT_INSTANT_2);
+    assertThat(instance.getString(), is(SHIFT_STRING_2));
     value = new Timestamp(SHIFT_INSTANT_3);
     assertThat(instance.getString(), is(SHIFT_STRING_3));
     value = new Timestamp(SHIFT_INSTANT_4);
