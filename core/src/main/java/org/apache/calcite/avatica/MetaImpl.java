@@ -379,6 +379,7 @@ public abstract class MetaImpl implements Meta {
           "");
     }
 
+    @SuppressWarnings("unused")
     public MetaColumn(
         String tableCat,
         String tableSchem,
