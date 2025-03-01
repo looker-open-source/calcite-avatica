@@ -37,7 +37,7 @@ import java.util.Properties;
  * Use 'jdbc:looker' as the protocol to select this over the default remote Avatica driver.
  */
 public class LookerDriver extends UnregisteredDriver {
-
+ 
   static {
     new LookerDriver().register();
   }
