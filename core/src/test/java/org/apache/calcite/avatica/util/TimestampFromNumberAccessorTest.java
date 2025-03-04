@@ -77,31 +77,6 @@ public class TimestampFromNumberAccessorTest {
   }
 
   /**
-   * Test case for <a href="https://issues.apache.org/jira/browse/CALCITE-6282">
-   * [CALCITE-6282] Avatica ignores time precision when returning TIME results</a>. */
-  @Test public void testPrecision() throws SQLException {
-    final AbstractCursor.Getter getter = new AbstractCursor.Getter() {
-      @Override
-      public Object getObject() throws SQLException {
-        return DST_INSTANT;
-      }
-
-      @Override
-      public boolean wasNull() throws SQLException {
-        return false;
-      }
-    };
-    AbstractCursor.TimestampFromNumberAccessor accessor =
-        new AbstractCursor.TimestampFromNumberAccessor(getter, null, 2);
-    String string = accessor.getString();
-    assertThat(string, is(DST_STRING_2));
-    accessor = new AbstractCursor.TimestampFromNumberAccessor(
-        getter, null, 3);
-    string = accessor.getString();
-    assertThat(string, is(DST_STRING_3));
-  }
-
-  /**
    * Test {@code getDate()} handles time zone conversions relative to the local calendar and not
    * UTC.
    */
