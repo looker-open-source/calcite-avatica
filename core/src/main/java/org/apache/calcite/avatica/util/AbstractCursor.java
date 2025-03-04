@@ -260,7 +260,7 @@ public abstract class AbstractCursor implements Cursor {
     if (calendar != null) {
       v += calendar.getTimeZone().getOffset(v);
     }
-    return DateTimeUtils.unixTimestampToString(v, precision);
+    return DateTimeUtils.unixTimestampToString(v);
   }
 
   /** Accesses a date value as a string, e.g. "2013-09-22". */
