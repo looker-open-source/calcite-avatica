@@ -37,6 +37,17 @@ to publish it in your `~/.m2/` local repository,
 then enable the local repo in Calcite by un-commenting the line `enableMavenLocal=true`
 in Calcite's `gradle.properties`, and pick the version of Avatica you just built.
 
+### Looker Kotlin SDK
+The driver uses Looker Kotlin SDK to interact with Looker's API. Unfortunately the
+Kotlin SDK in community support mode so no official releases are available through 
+package managers.
+
+We import the SDK using a pre-built fat jar under `libs/` folder. To build the SDK,
+clone the [repo](https://github.com/looker-open-source/sdk-codegen) and follow the instructions.
+Make sure that the fat jar targets Java 8.
+
+The SDK's was built from this [commit](https://github.com/looker-open-source/sdk-codegen/commit/68223e3b4387f985687fbe54ff70e237ae41d266).
+
 ## Release
 
 Release will have a name like `1.21.1-looker` (if the most
