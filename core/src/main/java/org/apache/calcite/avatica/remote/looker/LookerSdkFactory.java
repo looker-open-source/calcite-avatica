@@ -75,8 +75,11 @@ public class LookerSdkFactory {
   /**
    * Makes the SDK call and throws any errors as runtime exceptions
    */
+  @SuppressWarnings("deprecation")
   public static <T> T safeSdkCall(LookerSDKCall sdkCall) {
     try {
+      // ok() is deprecated and the suggested Kotlin alternative is not compatible with Java.
+      // We suppress warning to get pass compilation.
       return ok(sdkCall.call());
     } catch (Error e) {
       SDKErrorInfo error = parseSDKError(e.toString());
