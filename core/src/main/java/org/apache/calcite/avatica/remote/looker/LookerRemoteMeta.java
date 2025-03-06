@@ -37,6 +37,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
@@ -168,7 +169,7 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
 
     // makes a proper URL from the API endpoint path as the SDK would.
     String endpoint = sdkTransport.makeUrl(url, Collections.emptyMap(), null);
-    URL httpsUrl = new URL(endpoint);
+    URL httpsUrl = URI.create(endpoint).toURL();
     HttpsURLConnection connection = (HttpsURLConnection) httpsUrl.openConnection();
 
     // WARNING: You should only set `verifySSL=false` for local/dev instances!!

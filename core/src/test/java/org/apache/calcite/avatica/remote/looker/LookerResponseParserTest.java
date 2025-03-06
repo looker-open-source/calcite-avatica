@@ -71,12 +71,12 @@ public class LookerResponseParserTest {
     buildingMap.put(Rep.PRIMITIVE_DOUBLE, 1.99);
     // Non-Primitive types
     buildingMap.put(Rep.BOOLEAN, true);
-    buildingMap.put(Rep.BYTE, new Byte((byte) 10));
-    buildingMap.put(Rep.SHORT, new Short((short) 10));
-    buildingMap.put(Rep.INTEGER, new Integer(100));
-    buildingMap.put(Rep.LONG, new Long(10000));
-    buildingMap.put(Rep.FLOAT, new Float(1.99));
-    buildingMap.put(Rep.DOUBLE, new Double(1.99));
+    buildingMap.put(Rep.BYTE, Byte.valueOf((byte) 10));
+    buildingMap.put(Rep.SHORT, Short.valueOf((short) 10));
+    buildingMap.put(Rep.INTEGER, Integer.valueOf(100));
+    buildingMap.put(Rep.LONG, Long.valueOf(10000));
+    buildingMap.put(Rep.FLOAT, Float.valueOf((float) 1.99));
+    buildingMap.put(Rep.DOUBLE, Double.valueOf(1.99));
     buildingMap.put(Rep.STRING, "hello");
     buildingMap.put(Rep.NUMBER, new BigDecimal(1000000));
     // TODO: We shouldn't need to support OBJECT but MEASUREs are appearing as generic objects in
@@ -93,7 +93,7 @@ public class LookerResponseParserTest {
     buildingMap.put(Rep.ARRAY, new Array[]{});
     buildingMap.put(Rep.BYTE_STRING, new ByteString(new byte[]{'h', 'e', 'l', 'l', 'o'}));
     buildingMap.put(Rep.PRIMITIVE_CHAR, 'c');
-    buildingMap.put(Rep.CHARACTER, new Character('c'));
+    buildingMap.put(Rep.CHARACTER, Character.valueOf('c'));
     buildingMap.put(Rep.MULTISET, new ArrayList());
     buildingMap.put(Rep.STRUCT, new StructImpl(new ArrayList()));
     unsupportedRepValues = new HashMap(buildingMap);
