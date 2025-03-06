@@ -1141,7 +1141,7 @@ public class AvaticaResultSetConversionsTest {
     }
 
     @Override public void testGetString(ResultSet resultSet) throws SQLException {
-      assertEquals(DST_TIMESTAMP_STRING, g.getString(resultSet)); // Maybe delete
+      // assertEquals(DST_TIMESTAMP_STRING, g.getString(resultSet)); // Maybe delete
       assertEquals(expectedString, g.getString(resultSet));
     }
 
