@@ -23,6 +23,7 @@ on:
   pull_request:
     branches:
       - '*'
+  workflow_call:
 
 # https://help.github.com/en/actions/automating-your-workflow-with-github-actions/software-installed-on-github-hosted-runners
 
@@ -43,6 +44,11 @@ jobs:
       shell: cmd
       run: |
         ./gradlew --no-parallel --no-daemon build javadoc
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+          name: 'Looker JDBC Windows (JDK 11)'
+          path: ${{github.workspace}}/core/build/libs/avatica-core-*-SNAPSHOT.jar
 
   linux-jdk8:
     name: 'Linux (JDK 8)'
@@ -59,9 +65,14 @@ jobs:
       - name: 'Test'
         run: |
           ./gradlew --no-parallel --no-daemon tasks build javadoc
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+            name: 'Looker JDBC Linux (JDK 8)'
+            path: ${{github.workspace}}/core/build/libs/avatica-core-*-SNAPSHOT.jar
 
   linux-jdk11-oldest-guava-tz:
-    name: 'Linux (JDK 11), Oldest Guava, Pacific/Chatham Timezone'
+    name: 'Linux (JDK 11), Oldest Guava, Pacific-Chatham Timezone'
     runs-on: ubuntu-latest
     env:
       GUAVA: 14.0.1 # oldest supported Guava version
@@ -78,9 +89,14 @@ jobs:
       - name: 'Test'
         run: |
           ./gradlew --no-parallel --no-daemon -Pguava.version=${GUAVA:-14.0.1} build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+            name: 'Looker JDBC Linux (JDK 11), Oldest Guava, Pacific-Chatham Timezone'
+            path: ${{github.workspace}}/core/build/libs/avatica-core-*-SNAPSHOT.jar
 
   linux-jdk11-minimum-guava-tz:
-    name: 'Linux (JDK 11), Calcite Minimum Guava, America/New_York Timezone'
+    name: 'Linux (JDK 11), Calcite Minimum Guava, America-New_York Timezone'
     runs-on: ubuntu-latest
     env:
       GUAVA: '19.0' # Calcite's minimum Guava version
@@ -97,6 +113,11 @@ jobs:
       - name: 'Test'
         run: |
           ./gradlew --no-parallel --no-daemon -Pguava.version=${GUAVA:-14.0.1} tasks build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+            name: 'Looker JDBC Linux (JDK 11), Calcite Minimum Guava, America-New_York Timezone'
+            path: ${{github.workspace}}/core/build/libs/avatica-core-*-SNAPSHOT.jar
 
   linux-jdk11-middle-aged-guava:
     name: 'Linux (JDK 11), Middle-Aged Guava'
@@ -116,6 +137,11 @@ jobs:
         run: |
           # Disable getLicenses for Guava 22..29 because of [CALCITE-4815]
           ./gradlew --no-parallel --no-daemon -Pguava.version=${GUAVA:-14.0.1} build -x :standalone-server:licenseCopySpec -x :standalone-server:getLicenses -x :standalone-server:license -x :tck:licenseCopySpec -x :tck:getLicenses -x :tck:license
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+            name: 'Looker JDBC Linux (JDK 11), Middle-Aged Guava'
+            path: ${{github.workspace}}/core/build/libs/avatica-core-*-SNAPSHOT.jar
 
   linux-jdk11-newest-guava:
     name: 'Linux (JDK 11), Newest Guava'
@@ -134,6 +160,11 @@ jobs:
       - name: 'Test'
         run: |
           ./gradlew --no-parallel --no-daemon -Pguava.version=${GUAVA:-14.0.1} build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+            name: 'Looker JDBC Linux (JDK 11), Newest Guava'
+            path: ${{github.workspace}}/core/build/libs/avatica-core-*-SNAPSHOT.jar
 
   linux-jdk17:
     name: 'Linux (JDK 17)'
@@ -150,6 +181,11 @@ jobs:
     - name: 'Test'
       run: |
         ./gradlew --no-parallel --no-daemon build javadoc
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+          name: 'Looker JDBC Linux (JDK 17)'
+          path: ${{github.workspace}}/core/build/libs/avatica-core-*-SNAPSHOT.jar
 
   linux-jdk21:
     name: 'Linux (JDK 21)'
@@ -166,6 +202,11 @@ jobs:
       - name: 'Test'
         run: |
           ./gradlew --no-parallel --no-daemon build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+            name: 'Looker JDBC Linux (JDK 21)'
+            path: ${{github.workspace}}/core/build/libs/avatica-core-*-SNAPSHOT.jar
 
   mac:
     name: 'macOS (JDK 21)'
@@ -182,6 +223,11 @@ jobs:
     - name: 'Test'
       run: |
         ./gradlew --no-parallel --no-daemon tasks build javadoc
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+          name: 'Looker JDBC macOS (JDK 21)'
+          path: ${{github.workspace}}/core/build/libs/avatica-core-*-SNAPSHOT.jar
 
   linux-jdk23:
     name: 'Linux (JDK 23)'
@@ -198,3 +244,8 @@ jobs:
       - name: 'Test'
         run: |
           ./gradlew --no-parallel --no-daemon build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+            name: 'Looker JDBC Linux (JDK 23)'
+            path: ${{github.workspace}}/core/build/libs/avatica-core-*-SNAPSHOT.jar
