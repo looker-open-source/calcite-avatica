@@ -37,7 +37,6 @@ import java.util.Properties;
 import static com.looker.rtl.TransportKt.ok;
 import static com.looker.rtl.TransportKt.parseSDKError;
 
-import static org.apache.calcite.avatica.remote.Service.OpenConnectionRequest.serializeProperties;
 
 /**
  * Utility class for generating, authenticating, and calling {@link LookerSDK}s.
@@ -111,6 +110,14 @@ public class LookerSdkFactory {
     apiConfig.put("base_url", url);
     apiConfig.put("timeout", props.get(props.getOrDefault("timeout", "120")));
     apiConfig.put("verify_ssl", props.get("verifySSL"));
+    apiConfig.put("kotlin_http_transport", "JAVA_NET");
+
+    if (props.containsKey("iap_client_id")) {
+      apiConfig.put("iap_client_id", props.get("iap_client_id"));
+    }
+    if (props.containsKey("iap_service_account_email")) {
+      apiConfig.put("iap_service_account_email", props.get("iap_service_account_email"));
+    }
 
     boolean apiLogin = hasApiCreds(props);
     boolean authToken = hasAuthToken(props);
@@ -163,7 +170,11 @@ public class LookerSdkFactory {
    * @param props map of properties for the session.
    */
   public static LookerSDK createSdk(String url, Properties props) throws SQLException {
-    Map<String, String> stringProps = serializeProperties(props);
+    Map<String, String> stringProps = new HashMap<>(props.size());
+    for (String key : props.stringPropertyNames()) {
+      stringProps.put(key, props.getProperty(key));
+    }
+
     AuthSession session = createAuthSession(url, stringProps);
     return new LookerSDK(session);
   }
