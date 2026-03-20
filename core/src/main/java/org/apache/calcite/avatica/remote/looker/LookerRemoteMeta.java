@@ -189,6 +189,11 @@ public class LookerRemoteMeta extends RemoteMeta implements Meta {
     connection.setRequestProperty("Authorization",
         "token " + authSession.getAuthToken().getAccessToken());
 
+    String iapToken = authSession.fetchIapToken();
+    if (iapToken != null && !iapToken.isEmpty()) {
+      connection.setRequestProperty("Proxy-Authorization", "Bearer " + iapToken);
+    }
+
     // copy the headers from the authenticated SDK.
     authSession.getApiSettings().getHeaders()
         .forEach((header, value) -> connection.setRequestProperty(header, value));

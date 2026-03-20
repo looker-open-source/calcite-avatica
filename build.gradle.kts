@@ -201,6 +201,15 @@ allprojects {
             "implementation"(platform(project(":bom")))
             // Add the locally bundled LookerSDK fat jar
             "implementation"(files("../libs/looker-kotlin-sdk-100e3c9.jar"))
+            "implementation"("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
+
+            "implementation"("com.google.cloud:google-cloud-iamcredentials:2.42.0")
+            "implementation"("com.google.auth:google-auth-library-oauth2-http:1.24.0")
+
+            "implementation"(platform("com.google.http-client:google-http-client-bom:1.43.3"))
+            "implementation"("com.google.http-client:google-http-client-apache-v2")
+            "implementation"("com.google.http-client:google-http-client-gson")
+            "implementation"("com.google.code.gson:gson:2.10.1")
         }
     }
     if (!skipAutostyle) {
