@@ -14,11 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.calcite.avatica.remote.looker;
 
 import org.junit.Test;
+
 import java.util.Properties;
+
 import static org.junit.Assert.assertNotNull;
 
 public class LookerSdkFactoryTest {

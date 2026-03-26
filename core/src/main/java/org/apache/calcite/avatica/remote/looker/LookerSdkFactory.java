@@ -174,11 +174,11 @@ public class LookerSdkFactory {
     Map<String, String> stringProps = serializeProperties(props);
 
     if (props.getProperty("iap_client_id") != null) {
-        stringProps.put("iap_client_id", props.getProperty("iap_client_id"));
+      stringProps.put("iap_client_id", props.getProperty("iap_client_id"));
     }
 
     if (props.getProperty("iap_service_account_email") != null) {
-        stringProps.put("iap_service_account_email", props.getProperty("iap_service_account_email"));
+      stringProps.put("iap_service_account_email", props.getProperty("iap_service_account_email"));
     }
 
     AuthSession session = createAuthSession(url, stringProps);
