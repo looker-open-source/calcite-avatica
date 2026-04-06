@@ -14,11 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.calcite.avatica.remote.looker;
 
 import org.junit.Test;
+
 import java.util.Properties;
+
 import static org.junit.Assert.assertNotNull;
 
 public class LookerSdkFactoryTest {
@@ -28,11 +29,13 @@ public class LookerSdkFactoryTest {
     Properties props = new Properties();
     props.setProperty("token", "dummy_auth_token");
     props.setProperty("iap_client_id", "iap_client_id.apps.googleusercontent.com");
-    props.setProperty("iap_service_account_email", "iap-service-account@sample.iam.gserviceaccount.com");
+    props.setProperty("iap_service_account_email",
+        "iap-service-account@sample.iam.gserviceaccount.com");
 
     String dummyUrl = "https://dummy.looker.com:19999";
     com.looker.sdk.LookerSDK sdk = LookerSdkFactory.createSdk(dummyUrl, props);
 
-    assertNotNull("LookerSDK should instantiate successfully when IAP properties are provided", sdk);
+    assertNotNull(
+        "LookerSDK should instantiate successfully when IAP properties are provided", sdk);
   }
 }
