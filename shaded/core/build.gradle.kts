@@ -22,10 +22,6 @@ import com.github.vlsi.gradle.release.Apache2LicenseRenderer
 import com.github.vlsi.gradle.release.ArtifactType
 import com.github.vlsi.gradle.release.dsl.dependencyLicenses
 import com.github.vlsi.gradle.release.dsl.licensesCopySpec
-import com.github.vlsi.gradle.license.api.SimpleLicense
-import com.github.vlsi.gradle.license.api.SpdxLicenseException
-import com.github.vlsi.gradle.license.api.and
-import com.github.vlsi.gradle.license.api.with
 
 plugins {
     `java-library`
@@ -52,31 +48,8 @@ tasks {
     val getLicenses by registering(GatherLicenseTask::class) {
         configuration(shaded)
         extraLicenseDir.set(file("$rootDir/src/main/config/licenses"))
-
         expectLicense("com.google.protobuf:protobuf-java", SpdxLicense.BSD_3_Clause)
-
-        expectLicense("com.google.auth:google-auth-library-oauth2-http:1.24.0", SpdxLicense.BSD_3_Clause)
-        expectLicense("com.google.api:api-common:2.30.0", SpdxLicense.BSD_3_Clause)
-        expectLicense("com.google.api:gax:2.47.0", SpdxLicense.BSD_3_Clause)
-        expectLicense("com.google.auth:google-auth-library-credentials:1.24.0", SpdxLicense.BSD_3_Clause)
-        expectLicense("com.google.api:gax-grpc:2.47.0", SpdxLicense.BSD_3_Clause)
-        expectLicense("com.google.api:gax-httpjson:2.47.0", SpdxLicense.BSD_3_Clause)
-        expectLicense("com.google.protobuf:protobuf-java-util:3.25.3", SpdxLicense.BSD_3_Clause)
-
-        expectLicense("org.codehaus.mojo:animal-sniffer-annotations:1.23", SpdxLicense.MIT)
-
-        overrideLicense("com.google.re2j:re2j:1.7") {
-            expectedLicense = SimpleLicense("Go License", uri("https://golang.org/LICENSE"))
-            effectiveLicense = SpdxLicense.BSD_3_Clause
-        }
-
-        overrideLicense("javax.annotation:javax.annotation-api:1.3.2") {
-            expectedLicense = SimpleLicense(
-                "CDDL + GPLv2 with classpath exception",
-                uri("https://github.com/javaee/javax.annotation/blob/master/LICENSE")
-            )
-            effectiveLicense = SpdxLicense.CDDL_1_1 and (SpdxLicense.GPL_2_0_or_later with SpdxLicenseException.Classpath_exception_2_0)
-        }
+        expectLicense("org.slf4j:slf4j-api:1.7.25", SpdxLicense.MIT)
     }
 
     val license by registering(Apache2LicenseRenderer::class) {

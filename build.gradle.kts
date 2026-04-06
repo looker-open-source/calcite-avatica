@@ -195,6 +195,7 @@ allprojects {
         // RAT and Autostyle dependencies
         mavenCentral()
     }
+
     plugins.withId("java-library") {
         dependencies {
             "implementation"(platform(project(":bom")))
