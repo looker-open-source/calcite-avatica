@@ -37,7 +37,6 @@ import java.util.Properties;
 import static com.looker.rtl.TransportKt.ok;
 import static com.looker.rtl.TransportKt.parseSDKError;
 
-import static org.apache.calcite.avatica.remote.Service.OpenConnectionRequest.serializeProperties;
 
 /**
  * Utility class for generating, authenticating, and calling {@link LookerSDK}s.
@@ -171,7 +170,11 @@ public class LookerSdkFactory {
    * @param props map of properties for the session.
    */
   public static LookerSDK createSdk(String url, Properties props) throws SQLException {
-    Map<String, String> stringProps = serializeProperties(props);
+    Map<String, String> stringProps = new HashMap<>();
+    for (String key : props.stringPropertyNames()) {
+      stringProps.put(key, props.getProperty(key));
+    }
+
     AuthSession session = createAuthSession(url, stringProps);
     return new LookerSDK(session);
   }
