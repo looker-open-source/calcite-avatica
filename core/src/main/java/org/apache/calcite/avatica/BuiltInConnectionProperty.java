@@ -137,7 +137,17 @@ public enum BuiltInConnectionProperty implements ConnectionProperty {
    * HTTP Response Timeout (socket timeout) in milliseconds.
    */
   HTTP_RESPONSE_TIMEOUT("http_response_timeout",
-      Type.NUMBER, Timeout.ofMinutes(3).toMilliseconds(), false);
+      Type.NUMBER, Timeout.ofMinutes(3).toMilliseconds(), false),
+
+      /**
+       * Looker IAP Client ID
+       */
+      IAP_CLIENT_ID("iap_client_id", Type.STRING, null, false),
+
+      /**
+       * Looker IAP Service Account Email
+       */
+      IAP_SERVICE_ACCOUNT_EMAIL("iap_service_account_email", Type.STRING, null, false);
 
   private final String camelName;
   private final Type type;
