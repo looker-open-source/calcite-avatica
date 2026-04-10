@@ -170,7 +170,7 @@ public class LookerSdkFactory {
    * @param props map of properties for the session.
    */
   public static LookerSDK createSdk(String url, Properties props) throws SQLException {
-    Map<String, String> stringProps = new HashMap<>();
+    Map<String, String> stringProps = new HashMap<>(props.size());
     for (String key : props.stringPropertyNames()) {
       stringProps.put(key, props.getProperty(key));
     }
