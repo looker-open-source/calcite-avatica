@@ -22,6 +22,7 @@ import com.looker.sdk.LookerSDK;
 
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Base64;
@@ -93,7 +94,8 @@ public class LookerSdkFactoryTest {
     verify(mockSession).fetchIapToken();
 
     String[] parts = dummyIapToken.split("\\.");
-    String decoded = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
+    byte[] decodedBytes = Base64.getUrlDecoder().decode(parts[1]);
+    String decoded = StandardCharsets.UTF_8.decode(ByteBuffer.wrap(decodedBytes)).toString();
     assertTrue(decoded.contains("test-user@example.com"));
   }
 
