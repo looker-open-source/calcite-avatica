@@ -52,7 +52,7 @@ public class LookerSdkFactoryTest {
     LookerSDK sdk = LookerSdkFactory.createSdk(dummyUrl, props);
 
     assertNotNull(
-        "LookerSDK should instantiate successfully when IAP properties are provided", sdk);
+        "LookerSDK should instantiate successfully when IAP properties are provided.", sdk);
   }
 
   @Test
