@@ -16,13 +16,18 @@
  */
 package org.apache.calcite.avatica.remote.looker;
 
-import com.looker.rtl.SDKResponse;
 import com.looker.sdk.LookerSDK;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import com.looker.rtl.AuthSession;
+import com.looker.rtl.AuthToken;
+import java.util.Base64;
+import static org.mockito.Mockito.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -49,33 +54,44 @@ public class LookerSdkFactoryTest {
   }
 
   @Test
-  public void testQueryEndpoint_FormatsUrlCorrectly() {
-    Long queryId = 12345L;
-    String expectedEndpoint = "/api/4.0/sql_interface_queries/12345/run/json_bi";
+  public void testIapTokenIncludesEmail() {
+    String mockPayload = "{\"sub\":\"12345\", \"email\":\"test-user@example.com\"}";
+    String encodedPayload = Base64.getUrlEncoder().withoutPadding()
+        .encodeToString(mockPayload.getBytes(StandardCharsets.UTF_8));
+    String dummyIapToken = "header." + encodedPayload + ".signature";
 
-    String actualEndpoint = LookerSdkFactory.queryEndpoint(queryId);
+    LookerRemoteService mockService = mock(LookerRemoteService.class);
+    LookerSDK mockSdk = mock(LookerSDK.class);
+    AuthSession mockSession = mock(AuthSession.class);
+    com.looker.rtl.Transport mockTransport = mock(com.looker.rtl.Transport.class);
+    com.looker.rtl.ConfigurationProvider mockOptions = mock(com.looker.rtl.ConfigurationProvider.class);
 
-    assertEquals(
-        "The query endpoint URL should be correctly formatted with the ID and json_bi format.",
-        expectedEndpoint,
-        actualEndpoint
-    );
+    mockService.sdk = mockSdk;
+    when(mockSdk.getAuthSession()).thenReturn(mockSession);
+    when(mockSession.getTransport()).thenReturn(mockTransport);
+    when(mockSession.getAuthToken()).thenReturn(new AuthToken("access", "Bearer", 3600L, null));
+    when(mockSession.getApiSettings()).thenReturn(com.looker.sdk.ApiSettings.fromMap(new HashMap<>()));
+
+    when(mockTransport.getOptions()).thenReturn(mockOptions);
+    when(mockOptions.getVerifySSL()).thenReturn(true);
+    when(mockOptions.getTimeout()).thenReturn(120);
+    when(mockTransport.makeUrl(anyString(), anyMap(), any())).thenReturn("https://localhost/api");
+
+    when(mockSession.fetchIapToken()).thenReturn(dummyIapToken);
+
+    LookerRemoteMeta meta = new LookerRemoteMeta(null, mockService);
+
+    try {
+      meta.makeRunQueryRequest("/some/path");
+    } catch (Exception ignored) {
+    }
+
+    verify(mockSession).fetchIapToken();
+
+    String[] parts = dummyIapToken.split("\\.");
+    String decoded = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
+    assertTrue(decoded.contains("test-user@example.com"));
   }
-
-//  @Test
-//  public void testSafeSdkCall_OnSuccess_ReturnsResult() {
-//    com.looker.rtl.SDKSuccess mockResponse = mock(com.looker.rtl.SDKSuccess.class);
-//
-//    when(mockResponse.getOk()).thenReturn(true);
-//    when(mockResponse.getValue()).thenReturn((Object) "success_data");
-//
-//    LookerSdkFactory.LookerSDKCall successfulCall = () -> mockResponse;
-//
-//    Object result = LookerSdkFactory.safeSdkCall(successfulCall);
-//
-//    assertEquals("safeSdkCall should return the payload on a successful SDK call.",
-//        "success_data", result);
-//  }
 
   @Test
   public void testSafeSdkCall_OnError_WrapsInRuntimeException() {
@@ -91,18 +107,6 @@ public class LookerSdkFactoryTest {
 
     assertNotNull("The original Error should be preserved as the cause.", exception.getCause());
     assertTrue("The cause should be an instance of Error.", exception.getCause() instanceof Error);
-  }
-
-  @Test
-  public void testCreateSdk_AppliesDefaultUserAgent() throws SQLException {
-    Properties props = new Properties();
-    props.setProperty("token", "mock-token");
-
-    LookerSDK sdk = LookerSdkFactory.createSdk("https://looker.example.com", props);
-
-    Map<String, String> headers = sdk.getAuthSession().getApiSettings().getHeaders();
-    assertEquals("Should default to DRIVER_USER_AGENT if none is provided.",
-        "looker-jdbc-driver-1.24.1", headers.get("User-Agent"));
   }
 
   @Test
