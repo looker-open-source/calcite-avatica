@@ -65,13 +65,16 @@ public class LookerSdkFactoryTest {
     LookerSDK mockSdk = mock(LookerSDK.class);
     AuthSession mockSession = mock(AuthSession.class);
     com.looker.rtl.Transport mockTransport = mock(com.looker.rtl.Transport.class);
-    com.looker.rtl.ConfigurationProvider mockOptions = mock(com.looker.rtl.ConfigurationProvider.class);
+    com.looker.rtl.ConfigurationProvider mockOptions = mock(
+        com.looker.rtl.ConfigurationProvider.class);
 
     mockService.sdk = mockSdk;
     when(mockSdk.getAuthSession()).thenReturn(mockSession);
     when(mockSession.getTransport()).thenReturn(mockTransport);
-    when(mockSession.getAuthToken()).thenReturn(new AuthToken("access", "Bearer", 3600L, null));
-    when(mockSession.getApiSettings()).thenReturn(com.looker.sdk.ApiSettings.fromMap(new HashMap<>()));
+    when(mockSession.getAuthToken()).thenReturn(new AuthToken(
+        "access", "Bearer", 3600L, null));
+    when(mockSession.getApiSettings()).thenReturn(
+        com.looker.sdk.ApiSettings.fromMap(new HashMap<>()));
 
     when(mockTransport.getOptions()).thenReturn(mockOptions);
     when(mockOptions.getVerifySSL()).thenReturn(true);
@@ -95,7 +98,7 @@ public class LookerSdkFactoryTest {
   }
 
   @Test
-  public void testSafeSdkCall_OnError_WrapsInRuntimeException() {
+  public void testSafeSdkCallOnErrorWrapsInRuntimeException() {
     LookerSdkFactory.LookerSDKCall failingCall = () -> {
       throw new Error("Simulated Looker SDK Error");
     };
@@ -111,7 +114,7 @@ public class LookerSdkFactoryTest {
   }
 
   @Test
-  public void testCreateSdk_AppliesCustomUserAgent() throws SQLException {
+  public void testCreateSdkAppliesCustomUserAgent() throws SQLException {
     String customAgent = "my-custom-calcite-client-v2";
     Properties props = new Properties();
     props.setProperty("token", "mock-token");
