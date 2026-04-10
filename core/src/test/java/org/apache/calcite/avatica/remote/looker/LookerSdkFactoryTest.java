@@ -16,23 +16,24 @@
  */
 package org.apache.calcite.avatica.remote.looker;
 
+import com.looker.rtl.AuthSession;
+import com.looker.rtl.AuthToken;
 import com.looker.sdk.LookerSDK;
+
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import com.looker.rtl.AuthSession;
-import com.looker.rtl.AuthToken;
-import java.util.Base64;
-import static org.mockito.Mockito.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
