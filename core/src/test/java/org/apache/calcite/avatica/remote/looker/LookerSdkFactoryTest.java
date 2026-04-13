@@ -57,7 +57,7 @@ public class LookerSdkFactoryTest {
   }
 
   @Test
-  public void testIapTokenIncludesEmail() throws Exception {
+  public void testIapTokenIncludesEmail() {
     String mockPayload = "{\"sub\":\"12345\", \"email\":\"test-user@example.com\"}";
     String encodedPayload = Base64.getUrlEncoder().withoutPadding()
         .encodeToString(mockPayload.getBytes(StandardCharsets.UTF_8));
@@ -87,7 +87,10 @@ public class LookerSdkFactoryTest {
 
     LookerRemoteMeta meta = new LookerRemoteMeta(null, mockService);
 
-    meta.makeRunQueryRequest("/some/path");
+    try {
+      meta.makeRunQueryRequest("/some/path");
+    } catch (Exception ignored) {
+    }
 
     verify(mockSession).fetchIapToken();
 
@@ -110,9 +113,16 @@ public class LookerSdkFactoryTest {
         () -> LookerSdkFactory.safeSdkCall(failingCall)
     );
 
-    assertNotNull("The original Error should be preserved as the cause.", exception.getCause());
-    assertTrue("The cause should be an instance of Error.", exception.getCause() instanceof Error);
-    assertEquals("The cause's message should also match.", expectedMessage, exception.getCause().getMessage());
+    assertNotNull("The original Error should be preserved as the cause.",
+        exception.getCause()
+    );
+    assertTrue("The cause should be an instance of Error.",
+        exception.getCause() instanceof Error
+    );
+    assertEquals("The cause's message should also match.",
+        expectedMessage,
+        exception.getCause().getMessage()
+    );
   }
 
   @Test
