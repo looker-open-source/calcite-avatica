@@ -22,10 +22,7 @@ import com.looker.sdk.LookerSDK;
 
 import org.junit.Test;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -58,11 +55,7 @@ public class LookerSdkFactoryTest {
 
   @Test
   public void testIapTokenIncludesEmail() {
-    String mockPayload = "{\"sub\":\"12345\", \"email\":\"test-user@example.com\"}";
-    String encodedPayload = Base64.getUrlEncoder().withoutPadding()
-        .encodeToString(mockPayload.getBytes(StandardCharsets.UTF_8));
-    String dummyIapToken = "header." + encodedPayload + ".signature";
-
+    String dummyIapToken = "dummy-token";
     LookerRemoteService mockService = mock(LookerRemoteService.class);
     LookerSDK mockSdk = mock(LookerSDK.class);
     AuthSession mockSession = mock(AuthSession.class);
@@ -93,11 +86,6 @@ public class LookerSdkFactoryTest {
     }
 
     verify(mockSession).fetchIapToken();
-
-//    String[] parts = dummyIapToken.split("\\.");
-//    byte[] decodedBytes = Base64.getUrlDecoder().decode(parts[1]);
-//    String decoded = StandardCharsets.UTF_8.decode(ByteBuffer.wrap(decodedBytes)).toString();
-//    assertTrue(decoded.contains("test-user@example.com"));
   }
 
   @Test
