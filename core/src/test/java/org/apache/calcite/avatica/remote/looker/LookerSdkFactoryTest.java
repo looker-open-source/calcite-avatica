@@ -39,6 +39,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class LookerSdkFactoryTest {
+  private static final String USER_AGENT = "User-Agent";
 
   @Test
   public void testCreateSdkWithIapProperties() throws Exception {
@@ -56,7 +57,7 @@ public class LookerSdkFactoryTest {
   }
 
   @Test
-  public void testIapTokenIncludesEmail() {
+  public void testIapTokenIncludesEmail() throws Exception {
     String mockPayload = "{\"sub\":\"12345\", \"email\":\"test-user@example.com\"}";
     String encodedPayload = Base64.getUrlEncoder().withoutPadding()
         .encodeToString(mockPayload.getBytes(StandardCharsets.UTF_8));
@@ -86,10 +87,7 @@ public class LookerSdkFactoryTest {
 
     LookerRemoteMeta meta = new LookerRemoteMeta(null, mockService);
 
-    try {
-      meta.makeRunQueryRequest("/some/path");
-    } catch (Exception ignored) {
-    }
+    meta.makeRunQueryRequest("/some/path");
 
     verify(mockSession).fetchIapToken();
 
@@ -101,8 +99,9 @@ public class LookerSdkFactoryTest {
 
   @Test
   public void testSafeSdkCallOnErrorWrapsInRuntimeException() {
+    String expectedMessage = "Simulated Looker SDK Error";
     LookerSdkFactory.LookerSDKCall failingCall = () -> {
-      throw new Error("Simulated Looker SDK Error");
+      throw new Error(expectedMessage);
     };
 
     RuntimeException exception = assertThrows(
@@ -113,6 +112,7 @@ public class LookerSdkFactoryTest {
 
     assertNotNull("The original Error should be preserved as the cause.", exception.getCause());
     assertTrue("The cause should be an instance of Error.", exception.getCause() instanceof Error);
+    assertEquals("The cause's message should also match.", expectedMessage, exception.getCause().getMessage());
   }
 
   @Test
@@ -126,6 +126,6 @@ public class LookerSdkFactoryTest {
 
     Map<String, String> headers = sdk.getAuthSession().getApiSettings().getHeaders();
     assertEquals("Should use the custom userAgent provided in the properties.",
-        customAgent, headers.get("User-Agent"));
+        customAgent, headers.get(USER_AGENT));
   }
 }
